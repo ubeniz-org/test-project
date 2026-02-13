@@ -255,6 +255,7 @@ jobs:
         if: steps.analyze.outputs.needs_sync == 'true'
         id: cherry_pick
         run: |
+          echo "conflict_detected=false" >> $GITHUB_ENV
           git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
           CONFLICT_DETECTED=false
 
@@ -560,8 +561,12 @@ jobs:
 =======
 
       - name: Add comment with instructions
+<<<<<<< HEAD
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
         if: steps.cherry_pick.outputs.conflict_detected == 'true'
+=======
+        if: steps.analyze.outputs.needs_sync == 'true' && env.conflict_detected == 'true'
+>>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
         uses: actions/github-script@v7
         env:
           RUN_NUMBER: ${{ github.run_number }}
