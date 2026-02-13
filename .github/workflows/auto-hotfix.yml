@@ -139,7 +139,11 @@ jobs:
         with:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
+=======
+          token: ${{ secrets.PAT_TOKEN }}
+>>>>>>> 81fcc5b (Change token from GITHUB_TOKEN to PAT_TOKEN)
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
           title: |
