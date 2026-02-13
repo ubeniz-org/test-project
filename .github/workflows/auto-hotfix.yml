@@ -26,7 +26,11 @@ jobs:
         with:
           fetch-depth: 0
 <<<<<<< HEAD
+<<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
+=======
+          token: ${{ secrets.PAT_TOKEN }}
+>>>>>>> 2d7c7c0 (Replace GITHUB_TOKEN with PAT_TOKEN in workflow)
       
 =======
           token: ${{ secrets.PAT_TOKEN }}
