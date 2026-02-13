@@ -125,6 +125,7 @@ jobs:
             ### Cherry-pick edilen commit'ler:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             ${{ steps.analyze.outputs.commits }}
 =======
             ${commitList}
@@ -132,6 +133,9 @@ jobs:
 =======
             echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n'
 >>>>>>> a943604 (Simplify commit list output in auto-hotfix workflow)
+=======
+            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n' | sed 's/^/- /'
+>>>>>>> bebcc58 (Fix formatting for cherry-picked commits display)
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
