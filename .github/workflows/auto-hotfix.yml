@@ -130,6 +130,13 @@ jobs:
             const statusText = conflictDetected
               ? '⚠️ Conflict tespit edildi'
               : '✅ Conflict yok';
+<<<<<<< HEAD
+=======
+            
+            const prBody = `## 🤖 Otomatik Hotfix Sync
+              
+**Durum:** ` + statusText + `
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
 
             const commits = "${{ steps.analyze.outputs.commits }}".split(',');
 <<<<<<< HEAD
@@ -154,7 +161,25 @@ jobs:
             
             **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
 
+<<<<<<< HEAD
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
+=======
+### Checklist:
+- [ ] Değişiklikler incelendi
+- [ ] Conflict çözüldü (varsa)
+- [ ] Test ortamında sorun çıkarmaz
+
+**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              head: 'auto-hotfix-sync-${{ github.run_number }}',
+              base: 'rel/env-test',
+              body: prBody
+            });
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
             
             ### Cherry-pick edilen commit'ler:
 <<<<<<< HEAD
@@ -197,6 +222,7 @@ jobs:
         with:
           script: |
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
 <<<<<<< HEAD
@@ -217,6 +243,9 @@ jobs:
               repo: context.repo.repo,
               issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
               body: `## ⚠️ Conflict Çözümü Gerekiyor
+=======
+            const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
               
               \`\`\`bash
               git checkout auto-hotfix-sync-${{ github.run_number }}
@@ -236,6 +265,7 @@ git add .
 git commit -m "Resolve conflicts"
 git push
 \`\`\`
+<<<<<<< HEAD
       
 Conflict çözüldükten sonra bu PR merge edilebilir.`;
       
@@ -245,5 +275,15 @@ Conflict çözüldükten sonra bu PR merge edilebilir.`;
               issue_number: process.env.PR_NUMBER,
               body: commentBody
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
+=======
+
+Conflict çözüldükten sonra bu PR merge edilebilir.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
+              body: commentBody
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
             });
 
