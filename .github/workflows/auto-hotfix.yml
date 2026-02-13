@@ -140,7 +140,21 @@ jobs:
             const prBody = `## 🤖 Otomatik Hotfix Sync
                           
             **Durum:** ${statusText}
+<<<<<<< HEAD
 >>>>>>> 2cd4b44 (Change commit list format in auto-hotfix workflow)
+=======
+            
+            ### Cherry-pick edilen commit'ler:
+            ${{ steps.analyze.outputs.commits }}
+            
+            ### Checklist:
+            - [ ] Değişiklikler incelendi
+            - [ ] Conflict çözüldü (varsa)
+            - [ ] Test ortamında sorun çıkarmaz
+            
+            **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
+
+>>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
             
             ### Cherry-pick edilen commit'ler:
 <<<<<<< HEAD
@@ -177,11 +191,15 @@ jobs:
         if: steps.analyze.outputs.needs_sync == 'true' && env.conflict_detected == 'true'
 >>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
         uses: actions/github-script@v7
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
         with:
           script: |
 <<<<<<< HEAD
 =======
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+<<<<<<< HEAD
             
             \`\`\`bash
             git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
@@ -209,4 +227,23 @@ jobs:
               \`\`\`
               
               Conflict çözüldükten sonra bu PR merge edilebilir.`
+=======
+                    
+\`\`\`bash
+git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
+# Conflict'leri düzelt
+git add .
+git commit -m "Resolve conflicts"
+git push
+\`\`\`
+      
+Conflict çözüldükten sonra bu PR merge edilebilir.`;
+      
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: process.env.PR_NUMBER,
+              body: commentBody
+>>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
             });
+
