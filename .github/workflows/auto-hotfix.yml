@@ -16,10 +16,14 @@ jobs:
         with:
           fetch-depth: 0
 <<<<<<< HEAD
+<<<<<<< HEAD
           token: ${{ secrets.PAT_TOKEN }}
 =======
           token: ${{ secrets.GITHUB_TOKEN }}
 >>>>>>> 3864a64 (Update token to use GITHUB_TOKEN in workflow)
+=======
+          token: ${{ secrets.TOKEN }}
+>>>>>>> d414961 (Update GitHub token in auto-hotfix workflow)
       
       - name: Configure Git
         run: |
