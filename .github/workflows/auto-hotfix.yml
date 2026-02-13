@@ -112,14 +112,22 @@ jobs:
               : '✅ Conflict yok';
 
             const commits = "${{ steps.analyze.outputs.commits }}".split(',');
+<<<<<<< HEAD
             const commitList = commits.map(c => `- [ ] ${c}`).join('\n');
+=======
+            const commitList = commits.map(c => `- ${c}`).join('\n');
+>>>>>>> ca75c28 (Update commit list formatting in auto-hotfix.yml)
             const prBody = `## 🤖 Otomatik Hotfix Sync
                           
             **Durum:** ${statusText}
 >>>>>>> 2cd4b44 (Change commit list format in auto-hotfix workflow)
             
             ### Cherry-pick edilen commit'ler:
+<<<<<<< HEAD
             ${{ steps.analyze.outputs.commits }}
+=======
+            ${commitList}
+>>>>>>> ca75c28 (Update commit list formatting in auto-hotfix.yml)
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
