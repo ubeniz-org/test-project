@@ -329,11 +329,18 @@ jobs:
       - name: Create Pull Request
         if: steps.analyze.outputs.needs_sync == 'true'
         id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          CONFLICT_STATUS: ${{ env.conflict_detected }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
+<<<<<<< HEAD
             const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
+=======
+            const conflictDetected = '$CONFLICT_STATUS' === 'true';
+>>>>>>> df6fcc9 (Refactor conflict detection environment variable)
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
               : '✅ [AUTO] Hotfix Sync from Production';
