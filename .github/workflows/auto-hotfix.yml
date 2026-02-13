@@ -95,6 +95,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v6
         with:
+<<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
@@ -121,6 +122,40 @@ jobs:
             **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
 
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
+=======
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
+            const title = conflictDetected 
+              ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
+              : '✅ [AUTO] Hotfix Sync from Production';
+            const statusText = conflictDetected
+              ? '⚠️ Conflict tespit edildi'
+              : '✅ Conflict yok';
+            
+            const prBody = `## 🤖 Otomatik Hotfix Sync
+              
+**Durum:** ` + statusText + `
+
+### Cherry-pick edilen commit'ler:
+${{ steps.analyze.outputs.commits }}
+
+### Checklist:
+- [ ] Değişiklikler incelendi
+- [ ] Conflict çözüldü (varsa)
+- [ ] Test ortamında sorun çıkarmaz
+
+**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              head: 'auto-hotfix-sync-${{ github.run_number }}',
+              base: 'rel/env-test',
+              body: prBody
+            });
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
             
             ### Cherry-pick edilen commit'ler:
             ${{ steps.analyze.outputs.commits }}
@@ -151,6 +186,7 @@ jobs:
         with:
           script: |
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
 <<<<<<< HEAD
@@ -171,6 +207,9 @@ jobs:
               repo: context.repo.repo,
               issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
               body: `## ⚠️ Conflict Çözümü Gerekiyor
+=======
+            const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
               
               \`\`\`bash
               git checkout auto-hotfix-sync-${{ github.run_number }}
@@ -190,6 +229,7 @@ git add .
 git commit -m "Resolve conflicts"
 git push
 \`\`\`
+<<<<<<< HEAD
       
 Conflict çözüldükten sonra bu PR merge edilebilir.`;
       
@@ -199,5 +239,15 @@ Conflict çözüldükten sonra bu PR merge edilebilir.`;
               issue_number: process.env.PR_NUMBER,
               body: commentBody
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
+=======
+
+Conflict çözüldükten sonra bu PR merge edilebilir.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
+              body: commentBody
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
             });
 
