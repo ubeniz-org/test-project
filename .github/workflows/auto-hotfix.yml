@@ -92,29 +92,28 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
-          title: '${{ env.conflict_detected == ''true'' && ''⚠️'' || ''✅'' }} [AUTO] Hotfix Sync from Production'
+          title: |
+            ${{ env.conflict_detected == 'true' && '⚠️ [AUTO] Hotfix Sync - Review Needed' || '✅ [AUTO] Hotfix Sync from Production' }}
           body: |
             ## 🤖 Otomatik Hotfix Sync
             
-            ${{ env.conflict_detected == 'true' && '⚠️ **Conflict tespit edildi - Manuel review gerekiyor**' || '✅ **Conflict yok - Merge edilebilir**' }}
+            **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
             
             ### Cherry-pick edilen commit'ler:
-```
             ${{ steps.analyze.outputs.commits }}
-```
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
             - [ ] Conflict çözüldü (varsa)
             - [ ] Test ortamında sorun çıkarmaz
             
-            **Kaynak:** `rel/env-prod`
-            **Hedef:** `rel/env-test`
+            **Kaynak:** rel/env-prod
+            **Hedef:** rel/env-test
           labels: |
             hotfix
             auto-sync
             ${{ env.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
-          assignees: tech-lead-username
+          assignees: ubeniz
       
       - name: Add comment with instructions
         if: env.conflict_detected == 'true'
