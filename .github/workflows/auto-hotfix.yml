@@ -67,12 +67,18 @@ jobs:
           fi
       
 <<<<<<< HEAD
+<<<<<<< HEAD
       - name: Cherry-pick to new branch
 =======
       - name: Cherry-pick commits to new branch
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
+=======
+      - name: Cherry-pick commits
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
         if: steps.analyze.outputs.needs_sync == 'true'
+        id: cherry_pick
         run: |
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -87,11 +93,16 @@ jobs:
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
           git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
 >>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
+=======
+          git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
           
           IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
           
+          CONFLICT_DETECTED=false
           for commit in "${COMMITS[@]}"; do
             if ! git cherry-pick $commit; then
+<<<<<<< HEAD
 <<<<<<< HEAD
               echo "conflict_detected=true" >> $GITHUB_ENV
               # Conflict durumunda da commit et
@@ -102,11 +113,15 @@ jobs:
 =======
               # Conflict'i olduğu gibi bırak, commit et
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
+=======
+              CONFLICT_DETECTED=true
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
               git add -A
               git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)" || true
             fi
           done
           
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
           echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
@@ -117,6 +132,9 @@ jobs:
           # PAT_TOKEN ile push et
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
           git push origin auto-hotfix-sync-${{ github.run_number }}
+=======
+          echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
       
       - name: Create Pull Request
         if: steps.analyze.outputs.needs_sync == 'true'
@@ -129,7 +147,7 @@ jobs:
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
           title: |
-            ${{ env.conflict_detected == 'true' && '⚠️ [AUTO] Hotfix Sync - Review Needed' || '✅ [AUTO] Hotfix Sync from Production' }}
+            ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️' || '✅' }} [AUTO] Hotfix Sync from Production
           body: |
             ## 🤖 Otomatik Hotfix Sync
 =======
@@ -158,6 +176,7 @@ jobs:
               : '✅ Conflict yok';
 >>>>>>> df6fcc9 (Refactor conflict detection environment variable)
             
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
@@ -190,6 +209,9 @@ ${{ steps.analyze.outputs.commits }}
 
 **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`
             });
+=======
+            **Durum:** ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️ Conflict tespit edildi' || '✅ Conflict yok' }}
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
             
             // Label ekle
             await github.rest.issues.addLabels({
@@ -290,12 +312,11 @@ ${{ steps.analyze.outputs.commits }}
             - [ ] Conflict çözüldü (varsa)
             - [ ] Test ortamında sorun çıkarmaz
             
-            **Kaynak:** rel/env-prod
-            **Hedef:** rel/env-test
+            **Kaynak:** rel/env-prod → **Hedef:** rel/env-test
           labels: |
             hotfix
             auto-sync
-            ${{ env.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
+            ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
           assignees: ubeniz
 =======
             core.setOutput('pull-request-number', pr.number);
@@ -303,15 +324,20 @@ ${{ steps.analyze.outputs.commits }}
       
       - name: Add comment with instructions
 <<<<<<< HEAD
+<<<<<<< HEAD
         if: env.conflict_detected == 'true'
 =======
         if: steps.analyze.outputs.needs_sync == 'true' && env.conflict_detected == 'true'
 >>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
+=======
+        if: steps.cherry_pick.outputs.conflict_detected == 'true'
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
         uses: actions/github-script@v7
         env:
           RUN_NUMBER: ${{ github.run_number }}
           PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
         with:
+          github-token: ${{ secrets.PAT_TOKEN }}
           script: |
 <<<<<<< HEAD
 <<<<<<< HEAD
