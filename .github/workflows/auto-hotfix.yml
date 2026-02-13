@@ -111,7 +111,7 @@ jobs:
             **Durum:** ${statusText}
             
             ### Cherry-pick edilen commit'ler:
-            ${{ steps.analyze.outputs.commits }}
+            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n' | sed 's/^/- /'
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
