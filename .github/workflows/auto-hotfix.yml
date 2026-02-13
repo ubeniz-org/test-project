@@ -625,13 +625,18 @@ jobs:
               : '✅ Conflict yok';
 
             const commits = "${{ steps.analyze.outputs.commits }}".split(',');
+<<<<<<< HEAD
             const commitList = commits.map(c => `- [ ] ${c}`).join('\n');
+=======
+            const commitList = commits.map(c => `- ${c}`).join('\n');
+>>>>>>> ca75c28 (Update commit list formatting in auto-hotfix.yml)
             const prBody = `## 🤖 Otomatik Hotfix Sync
 
             **Durum:** ${statusText}
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
             
             ### Cherry-pick edilen commit'ler:
+<<<<<<< HEAD
             ${{ steps.analyze.outputs.commits }}
 =======
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -639,6 +644,9 @@ jobs:
             const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
             const conflictCommits = '${{ steps.cherry_pick.outputs.conflict_commits }}'.split(',').filter(Boolean);
             const successCommits = '${{ steps.cherry_pick.outputs.success_commits }}'.split(',').filter(Boolean);
+=======
+            ${commitList}
+>>>>>>> ca75c28 (Update commit list formatting in auto-hotfix.yml)
             
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Conflict Resolution Required'
