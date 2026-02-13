@@ -222,11 +222,18 @@ jobs:
             echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
           fi
       
+<<<<<<< HEAD
       - name: Cherry-pick commits to new branch
         if: steps.analyze.outputs.needs_sync == 'true'
         id: cherry_pick
         run: |
           # Test branch'inden yeni branch oluştur
+=======
+      - name: Cherry-pick commits
+        if: steps.analyze.outputs.needs_sync == 'true'
+        id: cherry_pick
+        run: |
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
           git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
           
           IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
@@ -235,13 +242,17 @@ jobs:
           for commit in "${COMMITS[@]}"; do
             if ! git cherry-pick $commit; then
               CONFLICT_DETECTED=true
+<<<<<<< HEAD
               # Conflict'i olduğu gibi bırak, commit et
+=======
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
               git add -A
               git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)" || true
             fi
           done
           
           echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
+<<<<<<< HEAD
           
           # PAT_TOKEN ile push et
           git push origin auto-hotfix-sync-${{ github.run_number }}
@@ -315,6 +326,8 @@ jobs:
           
 >>>>>>> 003d74d (Update auto-hotfix.yml)
           git push origin auto-hotfix-sync-${{ github.run_number }}
+=======
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
       
 =======
             echo "🔄 Cherry-picking $commit..."
@@ -361,10 +374,11 @@ jobs:
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
           title: |
-            ${{ env.conflict_detected == 'true' && '⚠️ [AUTO] Hotfix Sync - Review Needed' || '✅ [AUTO] Hotfix Sync from Production' }}
+            ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️' || '✅' }} [AUTO] Hotfix Sync from Production
           body: |
             ## 🤖 Otomatik Hotfix Sync
             
+<<<<<<< HEAD
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
 =======
 
@@ -416,6 +430,9 @@ jobs:
 =======
                           
             **Durum:** ${statusText}
+=======
+            **Durum:** ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️ Conflict tespit edildi' || '✅ Conflict yok' }}
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
             
 <<<<<<< HEAD
             ### Cherry-pick edilen commit'ler:
@@ -426,6 +443,7 @@ jobs:
             - [ ] Conflict çözüldü (varsa)
             - [ ] Test ortamında sorun çıkarmaz
             
+<<<<<<< HEAD
             **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
 
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
@@ -493,10 +511,13 @@ jobs:
 <<<<<<< HEAD
             **Kaynak:** rel/env-prod
             **Hedef:** rel/env-test
+=======
+            **Kaynak:** rel/env-prod → **Hedef:** rel/env-test
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
           labels: |
             hotfix
             auto-sync
-            ${{ env.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
+            ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
           assignees: ubeniz
 =======
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -542,7 +563,7 @@ ${{ steps.analyze.outputs.commits }}
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
       
       - name: Add comment with instructions
-        if: env.conflict_detected == 'true'
+        if: steps.cherry_pick.outputs.conflict_detected == 'true'
         uses: actions/github-script@v7
 =======
             ---
@@ -649,6 +670,7 @@ ${{ steps.analyze.outputs.commits }}
 =======
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
         with:
+          github-token: ${{ secrets.PAT_TOKEN }}
           script: |
 <<<<<<< HEAD
 <<<<<<< HEAD
