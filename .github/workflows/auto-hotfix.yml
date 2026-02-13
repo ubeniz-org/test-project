@@ -412,6 +412,7 @@ jobs:
           script: |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
 =======
             const conflictDetected = '$CONFLICT_STATUS' === 'true';
@@ -419,6 +420,9 @@ jobs:
 =======
             const conflictDetected = env.conflict_detected == 'true';
 >>>>>>> 5c3e7c2 (Fix conflict detection condition in workflow)
+=======
+            const conflictDetected = env.conflict_detected;
+>>>>>>> 6091d88 (Update auto-hotfix.yml)
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
               : '✅ [AUTO] Hotfix Sync from Production';
