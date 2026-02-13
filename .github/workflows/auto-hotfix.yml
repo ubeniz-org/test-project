@@ -98,19 +98,13 @@ jobs:
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
               : '✅ [AUTO] Hotfix Sync from Production';
-            const status = conflictDetected
+            const statusText = conflictDetected
               ? '⚠️ Conflict tespit edildi'
               : '✅ Conflict yok';
             
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              head: 'auto-hotfix-sync-${{ github.run_number }}',
-              base: 'rel/env-test',
-              body: `## 🤖 Otomatik Hotfix Sync
+            const prBody = `## 🤖 Otomatik Hotfix Sync
               
-**Durum:** ${status}
+**Durum:** ` + statusText + `
 
 ### Cherry-pick edilen commit'ler:
 ${{ steps.analyze.outputs.commits }}
@@ -120,7 +114,15 @@ ${{ steps.analyze.outputs.commits }}
 - [ ] Conflict çözüldü (varsa)
 - [ ] Test ortamında sorun çıkarmaz
 
-**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`
+**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              head: 'auto-hotfix-sync-${{ github.run_number }}',
+              base: 'rel/env-test',
+              body: prBody
             });
             
             await github.rest.issues.addLabels({
@@ -145,11 +147,7 @@ ${{ steps.analyze.outputs.commits }}
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
-              body: `## ⚠️ Conflict Çözümü Gerekiyor
+            const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
               
 \`\`\`bash
 git checkout auto-hotfix-sync-${{ github.run_number }}
@@ -159,5 +157,11 @@ git commit
 git push
 \`\`\`
 
-Conflict çözüldükten sonra bu PR merge edilebilir.`
+Conflict çözüldükten sonra bu PR merge edilebilir.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
+              body: commentBody
             });
