@@ -438,9 +438,25 @@ jobs:
             const commitList = commits.map(c => `- ${c}`).join('\n');
 >>>>>>> ca75c28 (Update commit list formatting in auto-hotfix.yml)
             const prBody = `## 🤖 Otomatik Hotfix Sync
+<<<<<<< HEAD
 
             **Durum:** ${statusText}
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
+=======
+                          
+            **Durum:** ${statusText}
+            
+            ### Cherry-pick edilen commit'ler:
+            ${{ steps.analyze.outputs.commits }}
+            
+            ### Checklist:
+            - [ ] Değişiklikler incelendi
+            - [ ] Conflict çözüldü (varsa)
+            - [ ] Test ortamında sorun çıkarmaz
+            
+            **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
+
+>>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
             
             ### Cherry-pick edilen commit'ler:
 <<<<<<< HEAD
@@ -571,8 +587,11 @@ jobs:
         env:
           RUN_NUMBER: ${{ github.run_number }}
           PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
+<<<<<<< HEAD
           CONFLICT_COMMITS: ${{ steps.cherry_pick.outputs.conflict_commits }}
 >>>>>>> b6ad3e5 (Improve auto hotfix workflow with new features)
+=======
+>>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
         with:
           script: |
 <<<<<<< HEAD
@@ -589,6 +608,7 @@ jobs:
             ### Resolution Steps:
 =======
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
 
@@ -675,3 +695,23 @@ jobs:
           fi
 =======
 >>>>>>> 07f3766 (Fix comment formatting and cleanup in auto-hotfix.yml)
+=======
+                    
+\`\`\`bash
+git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
+# Conflict'leri düzelt
+git add .
+git commit -m "Resolve conflicts"
+git push
+\`\`\`
+      
+Conflict çözüldükten sonra bu PR merge edilebilir.`;
+      
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: process.env.PR_NUMBER,
+              body: commentBody
+            });
+
+>>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
