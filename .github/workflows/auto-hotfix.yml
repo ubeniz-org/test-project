@@ -66,9 +66,14 @@ jobs:
             echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
           fi
       
+<<<<<<< HEAD
       - name: Cherry-pick to new branch
+=======
+      - name: Cherry-pick commits to new branch
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
         if: steps.analyze.outputs.needs_sync == 'true'
         run: |
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
           git checkout origin/rel/env-test
@@ -77,6 +82,9 @@ jobs:
           echo "conflict_detected=false" >> $GITHUB_ENV
 =======
 >>>>>>> 003d74d (Update auto-hotfix.yml)
+=======
+          # Test branch'inden yeni branch oluştur
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
           git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
 >>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
           
@@ -89,7 +97,11 @@ jobs:
               # Conflict durumunda da commit et
 =======
               CONFLICT_DETECTED=true
+<<<<<<< HEAD
 >>>>>>> 003d74d (Update auto-hotfix.yml)
+=======
+              # Conflict'i olduğu gibi bırak, commit et
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
               git add -A
               git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)" || true
             fi
@@ -99,12 +111,17 @@ jobs:
 =======
           echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
           
+<<<<<<< HEAD
 >>>>>>> 003d74d (Update auto-hotfix.yml)
+=======
+          # PAT_TOKEN ile push et
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
           git push origin auto-hotfix-sync-${{ github.run_number }}
       
       - name: Create Pull Request
         if: steps.analyze.outputs.needs_sync == 'true'
         id: create_pr
+<<<<<<< HEAD
 <<<<<<< HEAD
         uses: peter-evans/create-pull-request@v6
         with:
@@ -148,10 +165,50 @@ jobs:
             const prBody = `## 🤖 Otomatik Hotfix Sync
                           
             **Durum:** ${statusText}
+=======
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '${{ steps.cherry_pick.outputs.conflict_detected == ''true'' && ''⚠️'' || ''✅'' }} [AUTO] Hotfix Sync from Production',
+              head: 'auto-hotfix-sync-${{ github.run_number }}',
+              base: 'rel/env-test',
+              body: `## 🤖 Otomatik Hotfix Sync
+              
+**Durum:** ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️ Conflict tespit edildi' || '✅ Conflict yok' }}
+
+### Cherry-pick edilen commit'ler:
+${{ steps.analyze.outputs.commits }}
+
+### Checklist:
+- [ ] Değişiklikler incelendi
+- [ ] Conflict çözüldü (varsa)
+- [ ] Test ortamında sorun çıkarmaz
+
+**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`
+            });
             
-            ### Cherry-pick edilen commit'ler:
-            ${{ steps.analyze.outputs.commits }}
+            // Label ekle
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['hotfix', 'auto-sync']
+            });
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
             
+            // Assignee ekle
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              assignees: ['ubeniz']
+            });
+            
+<<<<<<< HEAD
             ### Checklist:
             - [ ] Değişiklikler incelendi
             - [ ] Conflict çözüldü (varsa)
@@ -240,6 +297,9 @@ ${{ steps.analyze.outputs.commits }}
             auto-sync
             ${{ env.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
           assignees: ubeniz
+=======
+            core.setOutput('pull-request-number', pr.number);
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
       
       - name: Add comment with instructions
 <<<<<<< HEAD
@@ -279,6 +339,7 @@ ${{ steps.analyze.outputs.commits }}
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
 >>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
               
+<<<<<<< HEAD
               \`\`\`bash
               git checkout auto-hotfix-sync-${{ github.run_number }}
               # Conflict'leri düzelt
@@ -317,5 +378,16 @@ Conflict çözüldükten sonra bu PR merge edilebilir.`;
               issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
               body: commentBody
 >>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
+=======
+\`\`\`bash
+git checkout auto-hotfix-sync-${{ github.run_number }}
+# Conflict'leri düzelt
+git add .
+git commit
+git push
+\`\`\`
+
+Conflict çözüldükten sonra bu PR merge edilebilir.`
+>>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
             });
 
