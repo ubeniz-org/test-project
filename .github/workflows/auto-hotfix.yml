@@ -95,7 +95,7 @@ jobs:
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
-            const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
+            const conflictDetected = env.conflict_detected;
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
               : '✅ [AUTO] Hotfix Sync from Production';
