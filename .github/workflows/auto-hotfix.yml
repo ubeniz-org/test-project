@@ -664,6 +664,7 @@ jobs:
                           
             **Durum:** ${statusText}
             
+<<<<<<< HEAD
             ### Cherry-pick edilen commit'ler:
             ${{ steps.analyze.outputs.commits }}
             
@@ -756,6 +757,22 @@ jobs:
 
 =======
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
+=======
+            const prBody = `## 🤖 Otomatik Hotfix Sync
+              
+**Durum:** ` + statusText + `
+
+### Cherry-pick edilen commit'ler:
+${{ steps.analyze.outputs.commits }}
+
+### Checklist:
+- [ ] Değişiklikler incelendi
+- [ ] Conflict çözüldü (varsa)
+- [ ] Test ortamında sorun çıkarmaz
+
+**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
+            
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -812,6 +829,7 @@ jobs:
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
         with:
           script: |
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -879,6 +897,9 @@ jobs:
               repo: context.repo.repo,
               issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
               body: `## ⚠️ Conflict Çözümü Gerekiyor
+=======
+            const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
               
               \`\`\`bash
               git checkout auto-hotfix-sync-${{ github.run_number }}
@@ -922,6 +943,7 @@ git add .
 git commit -m "Resolve conflicts"
 git push
 \`\`\`
+<<<<<<< HEAD
       
 Conflict çözüldükten sonra bu PR merge edilebilir.`;
       
@@ -929,6 +951,15 @@ Conflict çözüldükten sonra bu PR merge edilebilir.`;
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: process.env.PR_NUMBER,
+=======
+
+Conflict çözüldükten sonra bu PR merge edilebilir.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
+>>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
               body: commentBody
             });
 
