@@ -70,10 +70,13 @@ jobs:
         if: steps.analyze.outputs.needs_sync == 'true'
         run: |
 <<<<<<< HEAD
+<<<<<<< HEAD
           git checkout origin/rel/env-test
           git checkout -b auto-hotfix-sync-${{ github.run_number }}
 =======
           echo "conflict_detected=false" >> $GITHUB_ENV
+=======
+>>>>>>> 003d74d (Update auto-hotfix.yml)
           git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
 >>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
           
@@ -81,13 +84,22 @@ jobs:
           
           for commit in "${COMMITS[@]}"; do
             if ! git cherry-pick $commit; then
+<<<<<<< HEAD
               echo "conflict_detected=true" >> $GITHUB_ENV
               # Conflict durumunda da commit et
+=======
+              CONFLICT_DETECTED=true
+>>>>>>> 003d74d (Update auto-hotfix.yml)
               git add -A
               git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)" || true
             fi
           done
           
+<<<<<<< HEAD
+=======
+          echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
+          
+>>>>>>> 003d74d (Update auto-hotfix.yml)
           git push origin auto-hotfix-sync-${{ github.run_number }}
       
       - name: Create Pull Request
@@ -111,6 +123,7 @@ jobs:
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
             const conflictDetected = '$CONFLICT_STATUS' === 'true';
@@ -151,6 +164,25 @@ jobs:
             const prBody = `## 🤖 Otomatik Hotfix Sync
               
 **Durum:** ` + statusText + `
+=======
+            const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
+            const title = conflictDetected 
+              ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
+              : '✅ [AUTO] Hotfix Sync from Production';
+            const status = conflictDetected
+              ? '⚠️ Conflict tespit edildi'
+              : '✅ Conflict yok';
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              head: 'auto-hotfix-sync-${{ github.run_number }}',
+              base: 'rel/env-test',
+              body: `## 🤖 Otomatik Hotfix Sync
+              
+**Durum:** ${status}
+>>>>>>> 003d74d (Update auto-hotfix.yml)
 
 ### Cherry-pick edilen commit'ler:
 ${{ steps.analyze.outputs.commits }}
@@ -162,7 +194,11 @@ ${{ steps.analyze.outputs.commits }}
 
 **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
             
+<<<<<<< HEAD
             const { data: pr } = await github.rest.pulls.create({
+=======
+            await github.rest.issues.addLabels({
+>>>>>>> 003d74d (Update auto-hotfix.yml)
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: title,
@@ -172,6 +208,7 @@ ${{ steps.analyze.outputs.commits }}
             });
 >>>>>>> 50a69b7 (Refactor auto-hotfix workflow for conflict handling)
             
+<<<<<<< HEAD
             ### Cherry-pick edilen commit'ler:
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -182,6 +219,14 @@ ${{ steps.analyze.outputs.commits }}
 =======
             echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n' | sed 's/^/- /'
 >>>>>>> bebcc58 (Fix formatting for cherry-picked commits display)
+=======
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              assignees: ['ubeniz']
+            });
+>>>>>>> 003d74d (Update auto-hotfix.yml)
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
