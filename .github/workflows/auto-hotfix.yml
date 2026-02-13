@@ -163,6 +163,21 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+<<<<<<< HEAD
+=======
+            const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+            
+            \`\`\`bash
+            git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
+            # Conflict'leri düzelt
+            git add .
+            git commit -m "Resolve conflicts"
+            git push
+            \`\`\`
+      
+            Conflict çözüldükten sonra bu PR merge edilebilir.`;
+      
+>>>>>>> 07f3766 (Fix comment formatting and cleanup in auto-hotfix.yml)
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
