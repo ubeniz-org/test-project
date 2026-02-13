@@ -69,8 +69,13 @@ jobs:
       - name: Cherry-pick to new branch
         if: steps.analyze.outputs.needs_sync == 'true'
         run: |
+<<<<<<< HEAD
           git checkout origin/rel/env-test
           git checkout -b auto-hotfix-sync-${{ github.run_number }}
+=======
+          echo "conflict_detected=false" >> $GITHUB_ENV
+          git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
+>>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
           
           IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
           
@@ -150,7 +155,11 @@ jobs:
           assignees: ubeniz
       
       - name: Add comment with instructions
+<<<<<<< HEAD
         if: env.conflict_detected == 'true'
+=======
+        if: steps.analyze.outputs.needs_sync == 'true' && env.conflict_detected == 'true'
+>>>>>>> 9ff80ce (Fix condition for adding comment on conflict detection)
         uses: actions/github-script@v7
         with:
           script: |
