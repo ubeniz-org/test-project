@@ -101,7 +101,11 @@ jobs:
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
             
             ### Cherry-pick edilen commit'ler:
+<<<<<<< HEAD
             ${{ steps.analyze.outputs.commits }}
+=======
+            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n'
+>>>>>>> a943604 (Simplify commit list output in auto-hotfix workflow)
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
