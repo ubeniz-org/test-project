@@ -337,10 +337,14 @@ jobs:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
 <<<<<<< HEAD
+<<<<<<< HEAD
             const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
 =======
             const conflictDetected = '$CONFLICT_STATUS' === 'true';
 >>>>>>> df6fcc9 (Refactor conflict detection environment variable)
+=======
+            const conflictDetected = env.conflict_detected == 'true';
+>>>>>>> 5c3e7c2 (Fix conflict detection condition in workflow)
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
               : '✅ [AUTO] Hotfix Sync from Production';
