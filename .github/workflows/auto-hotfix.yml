@@ -315,6 +315,7 @@ jobs:
           git push origin auto-hotfix-sync-${{ github.run_number }}
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
       
+<<<<<<< HEAD
       - name: Cherry-pick to new branch
 =======
 
@@ -576,15 +577,20 @@ jobs:
           
       - name: Cherry-pick commits to new branch
 >>>>>>> 976f848 (Refactor commit synchronization logic in auto-hotfix.yml)
+=======
+      - name: Cherry-pick commits
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
         if: steps.analyze.outputs.needs_sync == 'true'
+        id: cherry_pick
         run: |
-          git checkout origin/rel/env-test
-          git checkout -b auto-hotfix-sync-${{ github.run_number }}
+          git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
           
           IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
           
+          CONFLICT_DETECTED=false
           for commit in "${COMMITS[@]}"; do
             if ! git cherry-pick $commit; then
+<<<<<<< HEAD
               echo "conflict_detected=true" >> $GITHUB_ENV
               # Conflict durumunda da commit et
 =======
@@ -598,6 +604,9 @@ jobs:
               # Eğer conflict varsa
               CONFLICT_DETECTED=true
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
+=======
+              CONFLICT_DETECTED=true
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
               git add -A
               # Değişiklik varsa commit oluştur
               if ! git diff --quiet; then
@@ -607,7 +616,7 @@ jobs:
           done
 <<<<<<< HEAD
           
-          git push origin auto-hotfix-sync-${{ github.run_number }}
+          echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
       
 =======
           echo "==================================="
@@ -634,10 +643,11 @@ jobs:
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
           title: |
-            ${{ env.conflict_detected == 'true' && '⚠️ [AUTO] Hotfix Sync - Review Needed' || '✅ [AUTO] Hotfix Sync from Production' }}
+            ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️' || '✅' }} [AUTO] Hotfix Sync from Production
           body: |
             ## 🤖 Otomatik Hotfix Sync
             
+<<<<<<< HEAD
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
 =======
 
@@ -689,6 +699,9 @@ jobs:
 =======
                           
             **Durum:** ${statusText}
+=======
+            **Durum:** ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️ Conflict tespit edildi' || '✅ Conflict yok' }}
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
             
 <<<<<<< HEAD
             ### Cherry-pick edilen commit'ler:
@@ -699,6 +712,7 @@ jobs:
             - [ ] Conflict çözüldü (varsa)
             - [ ] Test ortamında sorun çıkarmaz
             
+<<<<<<< HEAD
             **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
 
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
@@ -766,10 +780,13 @@ jobs:
 <<<<<<< HEAD
             **Kaynak:** rel/env-prod
             **Hedef:** rel/env-test
+=======
+            **Kaynak:** rel/env-prod → **Hedef:** rel/env-test
+>>>>>>> 387c7d5 (Refactor cherry-pick step and conflict handling)
           labels: |
             hotfix
             auto-sync
-            ${{ env.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
+            ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && 'needs-review' || 'auto-merge-ready' }}
           assignees: ubeniz
 =======
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -815,7 +832,7 @@ ${{ steps.analyze.outputs.commits }}
 >>>>>>> 20402d3 (Refactor auto-hotfix workflow for cherry-picking)
       
       - name: Add comment with instructions
-        if: env.conflict_detected == 'true'
+        if: steps.cherry_pick.outputs.conflict_detected == 'true'
         uses: actions/github-script@v7
 =======
             ---
@@ -922,6 +939,7 @@ ${{ steps.analyze.outputs.commits }}
 =======
 >>>>>>> 2e55c77 (Refactor auto-hotfix workflow for clarity)
         with:
+          github-token: ${{ secrets.PAT_TOKEN }}
           script: |
 <<<<<<< HEAD
 <<<<<<< HEAD
