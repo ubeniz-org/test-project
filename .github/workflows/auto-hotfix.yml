@@ -107,7 +107,7 @@ jobs:
               : '✅ Conflict yok';
 
             const commits = "${{ steps.analyze.outputs.commits }}".split(',');
-            const commitList = commits.map(c => `- ${c}`).join('\n');
+            const commitList = commits.map(c => `- [ ] ${c}`).join('\n');
             const prBody = `## 🤖 Otomatik Hotfix Sync
                           
             **Durum:** ${statusText}
