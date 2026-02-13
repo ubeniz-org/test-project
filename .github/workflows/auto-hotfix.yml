@@ -90,7 +90,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
           title: |
