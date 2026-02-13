@@ -70,7 +70,6 @@ jobs:
         if: steps.analyze.outputs.needs_sync == 'true'
         id: cherry_pick
         run: |
-          # Test branch'inden yeni branch oluştur
           git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
           
           IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
@@ -79,7 +78,6 @@ jobs:
           for commit in "${COMMITS[@]}"; do
             if ! git cherry-pick $commit; then
               CONFLICT_DETECTED=true
-              # Conflict'i olduğu gibi bırak, commit et
               git add -A
               git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)" || true
             fi
@@ -87,7 +85,6 @@ jobs:
           
           echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
           
-          # PAT_TOKEN ile push et
           git push origin auto-hotfix-sync-${{ github.run_number }}
       
       - name: Create Pull Request
@@ -97,15 +94,23 @@ jobs:
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
+            const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
+            const title = conflictDetected 
+              ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
+              : '✅ [AUTO] Hotfix Sync from Production';
+            const status = conflictDetected
+              ? '⚠️ Conflict tespit edildi'
+              : '✅ Conflict yok';
+            
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '${{ steps.cherry_pick.outputs.conflict_detected == ''true'' && ''⚠️'' || ''✅'' }} [AUTO] Hotfix Sync from Production',
+              title: title,
               head: 'auto-hotfix-sync-${{ github.run_number }}',
               base: 'rel/env-test',
               body: `## 🤖 Otomatik Hotfix Sync
               
-**Durum:** ${{ steps.cherry_pick.outputs.conflict_detected == 'true' && '⚠️ Conflict tespit edildi' || '✅ Conflict yok' }}
+**Durum:** ${status}
 
 ### Cherry-pick edilen commit'ler:
 ${{ steps.analyze.outputs.commits }}
@@ -118,7 +123,6 @@ ${{ steps.analyze.outputs.commits }}
 **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`
             });
             
-            // Label ekle
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -126,7 +130,6 @@ ${{ steps.analyze.outputs.commits }}
               labels: ['hotfix', 'auto-sync']
             });
             
-            // Assignee ekle
             await github.rest.issues.addAssignees({
               owner: context.repo.owner,
               repo: context.repo.repo,
