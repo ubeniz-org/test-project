@@ -429,6 +429,7 @@ jobs:
             ### Cherry-pick edilen commit'ler:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             ${{ steps.analyze.outputs.commits }}
 =======
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -442,6 +443,9 @@ jobs:
 =======
             echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n'
 >>>>>>> a943604 (Simplify commit list output in auto-hotfix workflow)
+=======
+            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n' | sed 's/^/- /'
+>>>>>>> bebcc58 (Fix formatting for cherry-picked commits display)
             
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Conflict Resolution Required'
