@@ -90,6 +90,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v6
         with:
+<<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: auto-hotfix-sync-${{ github.run_number }}
           base: rel/env-test
@@ -99,6 +100,23 @@ jobs:
             ## 🤖 Otomatik Hotfix Sync
             
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
+=======
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const conflictDetected = '$CONFLICT_STATUS' === 'true';
+            const title = conflictDetected 
+              ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
+              : '✅ [AUTO] Hotfix Sync from Production';
+            const statusText = conflictDetected
+              ? '⚠️ Conflict tespit edildi'
+              : '✅ Conflict yok';
+
+            const commits = "${{ steps.analyze.outputs.commits }}".split(',');
+            const commitList = commits.map(c => `- [ ] ${c}`).join('\n');
+            const prBody = `## 🤖 Otomatik Hotfix Sync
+                          
+            **Durum:** ${statusText}
+>>>>>>> 2cd4b44 (Change commit list format in auto-hotfix workflow)
             
             ### Cherry-pick edilen commit'ler:
             ${{ steps.analyze.outputs.commits }}
