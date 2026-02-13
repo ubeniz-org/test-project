@@ -121,8 +121,12 @@ jobs:
             **Durum:** ${statusText}
             
             ### Cherry-pick edilen commit'ler:
+<<<<<<< HEAD
             ${commitList}
 >>>>>>> ca75c28 (Update commit list formatting in auto-hotfix.yml)
+=======
+            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n'
+>>>>>>> a943604 (Simplify commit list output in auto-hotfix workflow)
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
