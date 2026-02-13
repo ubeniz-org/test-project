@@ -107,10 +107,14 @@ jobs:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
 <<<<<<< HEAD
+<<<<<<< HEAD
             const conflictDetected = '$CONFLICT_STATUS' === 'true';
 =======
             const conflictDetected = env.conflict_detected == 'true';
 >>>>>>> 5c3e7c2 (Fix conflict detection condition in workflow)
+=======
+            const conflictDetected = env.conflict_detected;
+>>>>>>> 6091d88 (Update auto-hotfix.yml)
             const title = conflictDetected 
               ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
               : '✅ [AUTO] Hotfix Sync from Production';
