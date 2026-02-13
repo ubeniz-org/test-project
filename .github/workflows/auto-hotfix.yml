@@ -515,6 +515,7 @@ jobs:
             ### Resolution Steps:
 =======
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+<<<<<<< HEAD
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
 
             \`\`\`bash
@@ -548,6 +549,19 @@ jobs:
             Conflict çözüldükten sonra bu PR merge edilebilir.`;
 
 >>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
+=======
+            
+            \`\`\`bash
+            git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
+            # Conflict'leri düzelt
+            git add .
+            git commit -m "Resolve conflicts"
+            git push
+            \`\`\`
+      
+            Conflict çözüldükten sonra bu PR merge edilebilir.`;
+      
+>>>>>>> 07f3766 (Fix comment formatting and cleanup in auto-hotfix.yml)
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -564,6 +578,7 @@ jobs:
               
               Conflict çözüldükten sonra bu PR merge edilebilir.`
             });
+<<<<<<< HEAD
 
       - name: Summary
         if: always()
@@ -584,3 +599,5 @@ jobs:
           else
             echo "- **Status:** Already synchronized ✅" >> $GITHUB_STEP_SUMMARY
           fi
+=======
+>>>>>>> 07f3766 (Fix comment formatting and cleanup in auto-hotfix.yml)
