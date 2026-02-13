@@ -103,18 +103,19 @@ jobs:
               : '✅ Conflict yok';
             
             const prBody = `## 🤖 Otomatik Hotfix Sync
-              
-**Durum:** ` + statusText + `
+                          
+            **Durum:** ${statusText}
+            
+            ### Cherry-pick edilen commit'ler:
+            ${{ steps.analyze.outputs.commits }}
+            
+            ### Checklist:
+            - [ ] Değişiklikler incelendi
+            - [ ] Conflict çözüldü (varsa)
+            - [ ] Test ortamında sorun çıkarmaz
+            
+            **Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
 
-### Cherry-pick edilen commit'ler:
-${{ steps.analyze.outputs.commits }}
-
-### Checklist:
-- [ ] Değişiklikler incelendi
-- [ ] Conflict çözüldü (varsa)
-- [ ] Test ortamında sorun çıkarmaz
-
-**Kaynak:** rel/env-prod → **Hedef:** rel/env-test`;
             
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
@@ -144,24 +145,28 @@ ${{ steps.analyze.outputs.commits }}
       - name: Add comment with instructions
         if: steps.cherry_pick.outputs.conflict_detected == 'true'
         uses: actions/github-script@v7
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
             const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
-              
+                    
 \`\`\`bash
-git checkout auto-hotfix-sync-${{ github.run_number }}
+git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
 # Conflict'leri düzelt
 git add .
-git commit
+git commit -m "Resolve conflicts"
 git push
 \`\`\`
-
+      
 Conflict çözüldükten sonra bu PR merge edilebilir.`;
-
+      
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: ${{ steps.create_pr.outputs.pull-request-number }},
+              issue_number: process.env.PR_NUMBER,
               body: commentBody
             });
+
