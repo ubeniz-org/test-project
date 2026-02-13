@@ -101,7 +101,7 @@ jobs:
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
             
             ### Cherry-pick edilen commit'ler:
-            ${{ steps.analyze.outputs.commits }}
+            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n' | sed 's/^/- /'
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
