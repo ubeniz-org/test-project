@@ -105,13 +105,15 @@ jobs:
             const statusText = conflictDetected
               ? '⚠️ Conflict tespit edildi'
               : '✅ Conflict yok';
-            
+
+            const commits = "${{ steps.analyze.outputs.commits }}".split(',');
+            const commitList = commits.map(c => `- ${c}`).join('\n');
             const prBody = `## 🤖 Otomatik Hotfix Sync
                           
             **Durum:** ${statusText}
             
             ### Cherry-pick edilen commit'ler:
-            echo "${{ steps.analyze.outputs.commits }}" | tr ',' '\n'
+            ${commitList}
             
             ### Checklist:
             - [ ] Değişiklikler incelendi
