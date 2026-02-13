@@ -28,6 +28,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
 =======
           token: ${{ secrets.PAT_TOKEN }}
@@ -35,6 +36,9 @@ jobs:
 =======
           token: ${{ secrets.GITHUB_TOKEN }}
 >>>>>>> 3864a64 (Update token to use GITHUB_TOKEN in workflow)
+=======
+          token: ${{ secrets.TOKEN }}
+>>>>>>> d414961 (Update GitHub token in auto-hotfix workflow)
       
 =======
           token: ${{ secrets.PAT_TOKEN }}
