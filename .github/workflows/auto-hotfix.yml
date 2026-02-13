@@ -88,7 +88,14 @@ jobs:
       - name: Create Pull Request
         if: steps.analyze.outputs.needs_sync == 'true'
         id: create_pr
+<<<<<<< HEAD
         uses: peter-evans/create-pull-request@v6
+=======
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          CONFLICT_STATUS: ${{ env.conflict_detected }}
+        uses: actions/github-script@v7
+>>>>>>> df6fcc9 (Refactor conflict detection environment variable)
         with:
 <<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
