@@ -30,7 +30,11 @@ jobs:
       - name: Find and analyze commits
         id: analyze
         run: |
+<<<<<<< HEAD
           MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
+=======
+          set -e
+>>>>>>> c56d26b (Optimize hotfix detection with patch-id caching)
           
 <<<<<<< HEAD
 =======
@@ -49,6 +53,7 @@ jobs:
           echo "📊 Building patch-id cache for rel/env-test..."
           CACHE_FILE=$(mktemp)
           git log origin/rel/env-test --format="%H" | while read -r test_commit; do
+<<<<<<< HEAD
             git show "$test_commit" | git patch-id --stable | cut -d' ' -f1
           done > "$CACHE_FILE"
 >>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
@@ -96,12 +101,20 @@ jobs:
           
           # Subshell problemini çöz - while loop içindeki değişkenler dışarı çıkmıyor
           # Tekrar hesapla
+=======
+            git show $test_commit | git patch-id --stable | cut -d' ' -f1
+          done > "$CACHE_FILE"
+          
+          echo "✅ Cache built: $(wc -l < "$CACHE_FILE") patches"
+
+>>>>>>> c56d26b (Optimize hotfix detection with patch-id caching)
           COMMITS_TO_SYNC=""
           COMMIT_COUNT=0
           
           while IFS='|' read -r hash message; do
             [ -z "$hash" ] && continue
             
+<<<<<<< HEAD
             PROD_PATCH_ID=$(git show "$hash" | git patch-id --stable | cut -d' ' -f1)
             
             if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
@@ -111,16 +124,32 @@ jobs:
                 COMMITS_TO_SYNC="${COMMITS_TO_SYNC},${hash}"
               fi
               COMMIT_COUNT=$((COMMIT_COUNT + 1))
+=======
+            # grep ile O(n) ama toplam O(n*m) - yine de orijinalden iyi
+            if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
+              COMMITS_TO_SYNC="$COMMITS_TO_SYNC$hash,"
+              ((COMMIT_COUNT++))
+              echo "🔥 Hotfix detected: ${hash:0:7} - $message"
+            else
+              echo "✓ Already in test: ${hash:0:7} - $message"
+>>>>>>> c56d26b (Optimize hotfix detection with patch-id caching)
             fi
           done <<EOF
           $MISSING
           EOF
 
           rm -f "$CACHE_FILE"
+<<<<<<< HEAD
 
           if [ "$COMMIT_COUNT" -eq 0 ]; then
             echo "✅ All commits already in test branch"
 >>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
+=======
+          COMMITS_TO_SYNC=${COMMITS_TO_SYNC%,}
+
+          if [ -z "$COMMITS_TO_SYNC" ]; then
+            echo "✅ All commits already in test branch"
+>>>>>>> c56d26b (Optimize hotfix detection with patch-id caching)
             echo "needs_sync=false" >> $GITHUB_OUTPUT
           else
             echo "🔥 Found $COMMIT_COUNT commit(s) to sync"
