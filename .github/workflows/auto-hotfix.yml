@@ -34,7 +34,7 @@ jobs:
         run: |
           set -e
           
-          MISSING=$(git log origin/rel/env-prod..origin/rel/env-test --format="%H|%s")
+          MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
 
           if [ -z "$MISSING" ]; then
             echo "✅ Branches are synchronized"
@@ -46,7 +46,7 @@ jobs:
           echo "📊 Building patch-id cache for rel/env-test..."
           CACHE_FILE=$(mktemp)
           git log origin/rel/env-test --format="%H" | while read -r test_commit; do
-            git show $test_commit | git patch-id --stable | cut -d' ' -f1
+            git show "$test_commit" | git patch-id --stable | cut -d' ' -f1
           done > "$CACHE_FILE"
           
           echo "✅ Cache built: $(wc -l < "$CACHE_FILE") patches"
@@ -54,31 +54,55 @@ jobs:
           COMMITS_TO_SYNC=""
           COMMIT_COUNT=0
           
-          while IFS='|' read -r hash message; do
-            PROD_PATCH_ID=$(git show $hash | git patch-id --stable | cut -d' ' -f1)
+          echo "$MISSING" | while IFS='|' read -r hash message; do
+            [ -z "$hash" ] && continue
             
-            # grep ile O(n) ama toplam O(n*m) - yine de orijinalden iyi
+            PROD_PATCH_ID=$(git show "$hash" | git patch-id --stable | cut -d' ' -f1)
+            
+            # grep ile kontrol
             if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
-              COMMITS_TO_SYNC="$COMMITS_TO_SYNC$hash,"
-              ((COMMIT_COUNT++))
-              echo "🔥 Hotfix detected: ${hash:0:7} - $message"
+              COMMITS_TO_SYNC="${COMMITS_TO_SYNC}${hash},"
+              COMMIT_COUNT=$((COMMIT_COUNT + 1))
+              echo "🔥 Hotfix detected: ${hash} - $message" | cut -c1-100
             else
-              echo "✓ Already in test: ${hash:0:7} - $message"
+              echo "✓ Already in test: ${hash} - $message" | cut -c1-100
             fi
-          done <<< "$MISSING"
+          done
+          
+          # Subshell problemini çöz - while loop içindeki değişkenler dışarı çıkmıyor
+          # Tekrar hesapla
+          COMMITS_TO_SYNC=""
+          COMMIT_COUNT=0
+          
+          while IFS='|' read -r hash message; do
+            [ -z "$hash" ] && continue
+            
+            PROD_PATCH_ID=$(git show "$hash" | git patch-id --stable | cut -d' ' -f1)
+            
+            if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
+              if [ -z "$COMMITS_TO_SYNC" ]; then
+                COMMITS_TO_SYNC="$hash"
+              else
+                COMMITS_TO_SYNC="${COMMITS_TO_SYNC},${hash}"
+              fi
+              COMMIT_COUNT=$((COMMIT_COUNT + 1))
+            fi
+          done <<EOF
+          $MISSING
+          EOF
 
           rm -f "$CACHE_FILE"
-          COMMITS_TO_SYNC=${COMMITS_TO_SYNC%,}
 
-          if [ -z "$COMMITS_TO_SYNC" ]; then
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
             echo "✅ All commits already in test branch"
             echo "needs_sync=false" >> $GITHUB_OUTPUT
           else
+            echo "🔥 Found $COMMIT_COUNT commit(s) to sync"
             echo "needs_sync=true" >> $GITHUB_OUTPUT
             echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
             echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
           fi
-
+          
       - name: Cherry-pick commits to new branch
         if: steps.analyze.outputs.needs_sync == 'true'
         id: cherry_pick
