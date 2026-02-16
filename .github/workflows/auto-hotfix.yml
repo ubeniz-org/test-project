@@ -5,12 +5,16 @@ on:
   push:
     branches:
       - rel/env-prod
-  workflow_dispatch: # Manuel tetikleme için
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   sync-hotfix:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # Timeout ekle
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -29,9 +33,8 @@ jobs:
           git fetch origin rel/env-test
           git fetch origin rel/env-prod
 
-      - name: Find and analyze commits
-        id: analyze
-        shell: bash
+      - name: Check if sync needed
+        id: check
         run: |
           set -e
           
@@ -45,15 +48,10 @@ jobs:
           fi
 
           MISSING_COUNT=$(echo "$MISSING" | wc -l)
-          echo "📊 Commits in prod not in test (by hash): $MISSING_COUNT"
+          echo "📊 Found $MISSING_COUNT commit(s) in prod not in test"
           echo ""
-          
-          # Basit ama etkili: Sadece commit hash'lerini kullan
-          # GitHub UI "able to merge" diyorsa, cherry-pick başarılı olur
-          COMMITS_TO_SYNC=$(echo "$MISSING" | tr '\n' ',' | sed 's/,$//')
-          
-          echo "🔥 Commits to sync:"
-          echo "$MISSING" | while read hash; do
+          echo "Commits to sync:"
+          echo "$MISSING" | head -10 | while read hash; do
             [ -z "$hash" ] && continue
             MSG=$(git log -1 --format="%s" "$hash")
             echo "  ${hash:0:7} - $MSG"
@@ -61,162 +59,97 @@ jobs:
           
           echo ""
           echo "needs_sync=true" >> $GITHUB_OUTPUT
-          echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
           echo "commit_count=$MISSING_COUNT" >> $GITHUB_OUTPUT
-          
-      - name: Cherry-pick commits to new branch
-        if: steps.analyze.outputs.needs_sync == 'true'
-        id: cherry_pick
-        shell: bash
+
+      - name: Merge prod into test
+        if: steps.check.outputs.needs_sync == 'true'
+        id: merge
         run: |
           set +e
           
           BRANCH_NAME="auto-hotfix-sync-${{ github.run_number }}"
           git checkout -b "$BRANCH_NAME" origin/rel/env-test
           
-          CONFLICT_DETECTED=false
-          CONFLICT_COMMITS=""
-          SUCCESS_COMMITS=""
-          SKIPPED_COMMITS=""
-
-          IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
-
-          for commit in "${COMMITS[@]}"; do
-            echo ""
-            echo "=========================================="
-            echo "🔄 Processing commit: $commit"
-            git log --oneline -1 "$commit"
-            echo "=========================================="
-            
-            # Cherry-pick yap
-            if git cherry-pick "$commit" 2>&1; then
-              echo "✅ Cherry-pick successful"
-              [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
-              SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
-              
-            else
-              CHERRY_EXIT=$?
-              echo "⚠️ Cherry-pick failed with exit code: $CHERRY_EXIT"
-              
-              # Git durumunu kontrol et
-              echo ""
-              echo "Git status:"
-              git status --short
-              
-              # Unmerged files var mı? (gerçek conflict)
-              if git ls-files -u | grep -q .; then
-                echo "🔴 REAL CONFLICT - Unmerged files detected:"
-                git ls-files -u
-                
-                CONFLICT_DETECTED=true
-                [ -n "$CONFLICT_COMMITS" ] && CONFLICT_COMMITS="${CONFLICT_COMMITS},"
-                CONFLICT_COMMITS="${CONFLICT_COMMITS}${commit}"
-                
-                # Conflict'leri resolve et ve commit
-                git add -A
-                git commit --no-edit -m "WIP: Cherry-pick $commit (⚠️ CONFLICT)"
-                
-              else
-                echo "ℹ️ No unmerged files"
-                
-                # Staged veya unstaged değişiklik var mı?
-                if ! git diff --cached --quiet || ! git diff --quiet; then
-                  echo "✅ Changes detected (non-conflict issue) - committing"
-                  git add -A
-                  git commit --no-edit -m "Cherry-pick $commit (auto-resolved)"
-                  [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
-                  SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
-                else
-                  echo "⊘ Empty commit (changes already in test) - skipping"
-                  git cherry-pick --abort 2>/dev/null || true
-                  git reset --hard 2>/dev/null || true
-                  [ -n "$SKIPPED_COMMITS" ] && SKIPPED_COMMITS="${SKIPPED_COMMITS},"
-                  SKIPPED_COMMITS="${SKIPPED_COMMITS}${commit}"
-                fi
-              fi
-            fi
-            
-            echo ""
-          done
-
-          echo ""
-          echo "=========================================="
-          echo "📊 Final Summary:"
-          echo "  ✅ Success: $(echo "$SUCCESS_COMMITS" | tr ',' ' ' | wc -w)"
-          echo "  🔴 Conflicts: $(echo "$CONFLICT_COMMITS" | tr ',' ' ' | wc -w)"
-          echo "  ⊘ Skipped (already applied): $(echo "$SKIPPED_COMMITS" | tr ',' ' ' | wc -w)"
-          echo "=========================================="
-
-          # Eğer hiç gerçek conflict yoksa ve sadece skip varsa
-          if [ "$CONFLICT_DETECTED" = "false" ] && [ -z "$SUCCESS_COMMITS" ] && [ -n "$SKIPPED_COMMITS" ]; then
-            echo ""
-            echo "✅ All commits already exist in test branch (no sync needed)"
+          echo "🔄 Attempting to merge origin/rel/env-prod into $BRANCH_NAME..."
+          
+          # Merge attempt
+          git merge origin/rel/env-prod --no-ff -m "Merge hotfixes from rel/env-prod"
+          MERGE_EXIT=$?
+          
+          if [ $MERGE_EXIT -eq 0 ]; then
+            echo "✅ Merge successful - no conflicts!"
             echo "conflict_detected=false" >> $GITHUB_OUTPUT
-            echo "all_skipped=true" >> $GITHUB_OUTPUT
           else
-            echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
-            echo "all_skipped=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Merge has conflicts"
+            
+            # Check for real conflicts
+            if git ls-files -u | grep -q .; then
+              echo "🔴 Real conflicts detected:"
+              git ls-files -u | cut -f2 | sort -u
+              echo ""
+              
+              echo "conflict_detected=true" >> $GITHUB_OUTPUT
+              
+              # List conflicted files for PR
+              CONFLICT_FILES=$(git ls-files -u | cut -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+              echo "conflict_files=$CONFLICT_FILES" >> $GITHUB_OUTPUT
+              
+              # Don't commit yet - let user resolve
+              echo "ℹ️ Leaving conflicts for manual resolution"
+            else
+              echo "✅ No actual conflicts (auto-resolved)"
+              git add -A
+              git commit -m "Merge hotfixes from rel/env-prod (auto-resolved)"
+              echo "conflict_detected=false" >> $GITHUB_OUTPUT
+            fi
           fi
           
-          echo "conflict_commits=$CONFLICT_COMMITS" >> $GITHUB_OUTPUT
-          echo "success_commits=$SUCCESS_COMMITS" >> $GITHUB_OUTPUT
-          echo "skipped_commits=$SKIPPED_COMMITS" >> $GITHUB_OUTPUT
-          
-          # Branch'i push et
+          # Push the branch
           git push origin "$BRANCH_NAME"
-          
+
       - name: Create Pull Request
-        if: steps.analyze.outputs.needs_sync == 'true'
+        if: steps.check.outputs.needs_sync == 'true'
         id: create_pr
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
-            const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
-            const conflictCommits = '${{ steps.cherry_pick.outputs.conflict_commits }}'.split(',').filter(Boolean);
-            const successCommits = '${{ steps.cherry_pick.outputs.success_commits }}'.split(',').filter(Boolean);
+            const conflictDetected = '${{ steps.merge.outputs.conflict_detected }}' === 'true';
+            const conflictFiles = '${{ steps.merge.outputs.conflict_files }}'.split(',').filter(Boolean);
             
             const title = conflictDetected 
-              ? '⚠️ [AUTO] Hotfix Sync - Conflict Resolution Required'
+              ? '⚠️ [AUTO] Hotfix Sync - Merge Conflicts'
               : '✅ [AUTO] Hotfix Sync from Production';
             
             const statusEmoji = conflictDetected ? '⚠️' : '✅';
             const statusText = conflictDetected
-              ? `${conflictCommits.length} conflict(s) detected`
-              : 'No conflicts - Ready to merge';
+              ? `Merge conflicts in ${conflictFiles.length} file(s)`
+              : 'Clean merge - Ready to merge';
 
-            let commitList = '';
-            
-            if (successCommits.length > 0) {
-              commitList += '### ✅ Successfully cherry-picked:\n';
-              commitList += successCommits.map(c => `- [x] \`${c.substring(0, 7)}\``).join('\n');
-              commitList += '\n\n';
-            }
-            
-            if (conflictCommits.length > 0) {
-              commitList += '### ⚠️ Conflicts (need manual resolution):\n';
-              commitList += conflictCommits.map(c => `- [ ] \`${c.substring(0, 7)}\` ⚠️`).join('\n');
-              commitList += '\n\n';
+            let fileList = '';
+            if (conflictFiles.length > 0) {
+              fileList = '### ⚠️ Conflicted files:\n';
+              fileList += conflictFiles.map(f => `- \`${f}\``).join('\n');
+              fileList += '\n\n';
             }
 
             const prBody = `## 🤖 Automatic Hotfix Synchronization
 
             **Status:** ${statusEmoji} ${statusText}
-            **Total commits:** ${{ steps.analyze.outputs.commit_count }}
-            **Workflow run:** #${{ github.run_number }}
+            **Commits:** ${{ steps.check.outputs.commit_count }}
+            **Workflow:** #${{ github.run_number }}
+            **Method:** Merge (not cherry-pick)
             
-            ${commitList}
+            ${fileList}
             
             ### 📋 Review Checklist:
             - [ ] All changes reviewed
-            - [ ] Conflicts resolved (if any)
+            ${conflictDetected ? '- [ ] Conflicts resolved' : ''}
             - [ ] No breaking changes for test environment
             - [ ] CI checks passed
             
             ---
-            **Source:** \`rel/env-prod\` → **Target:** \`rel/env-test\`
-            
-            ${conflictDetected ? '> ⚠️ **Action required:** Manual conflict resolution needed before merge' : '> ✅ **Ready to merge:** No conflicts detected'}`;
+            **Source:** \`rel/env-prod\` → **Target:** \`rel/env-test\``;
 
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
@@ -250,22 +183,22 @@ jobs:
             core.setOutput('pull-request-url', pr.html_url);
 
       - name: Add conflict resolution instructions
-        if: steps.cherry_pick.outputs.conflict_detected == 'true'
+        if: steps.merge.outputs.conflict_detected == 'true'
         uses: actions/github-script@v7
         env:
           RUN_NUMBER: ${{ github.run_number }}
           PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
-          CONFLICT_COMMITS: ${{ steps.cherry_pick.outputs.conflict_commits }}
+          CONFLICT_FILES: ${{ steps.merge.outputs.conflict_files }}
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
-            const conflictCommits = process.env.CONFLICT_COMMITS.split(',').filter(Boolean);
-            const commitList = conflictCommits.map(c => `- \`${c.substring(0, 7)}\``).join('\n');
+            const conflictFiles = process.env.CONFLICT_FILES.split(',').filter(Boolean);
+            const fileList = conflictFiles.map(f => `- \`${f}\``).join('\n');
             
-            const commentBody = `## ⚠️ Conflict Resolution Required
+            const commentBody = `## ⚠️ Merge Conflict Resolution Required
 
-            The following commits need manual conflict resolution:
-            ${commitList}
+            Conflicted files:
+            ${fileList}
 
             ### Resolution Steps:
 
@@ -274,21 +207,19 @@ jobs:
             git fetch origin
             git checkout auto-hotfix-sync-${process.env.RUN_NUMBER}
 
-            # 2. Check the conflicted commits (marked as WIP)
-            git log --oneline -10
+            # 2. Resolve conflicts in the files above
+            # Edit conflicted files manually or use a merge tool
 
-            # 3. If needed, reset to clean state and re-apply
-            git reset --hard origin/rel/env-test
-            
-            # 4. Manually cherry-pick with conflict resolution
-            ${conflictCommits.map(c => `git cherry-pick ${c} # resolve conflicts, then: git add . && git cherry-pick --continue`).join('\n            ')}
+            # 3. Mark as resolved and commit
+            git add .
+            git commit -m "Resolve merge conflicts"
 
-            # 5. Push the resolved changes
-            git push origin auto-hotfix-sync-${process.env.RUN_NUMBER} --force-with-lease
+            # 4. Push
+            git push origin auto-hotfix-sync-${process.env.RUN_NUMBER}
             \`\`\`
 
             ### Alternative: Use GitHub Web Interface
-            You can also resolve conflicts directly in GitHub's web interface.
+            Click "Resolve conflicts" button above to resolve in the browser.
 
             ---
             Once conflicts are resolved, this PR will be ready to merge. ✅`;
@@ -306,15 +237,15 @@ jobs:
           echo "### 🤖 Hotfix Sync Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ steps.analyze.outputs.needs_sync }}" == "true" ]; then
-            echo "- **Status:** Sync needed ✅" >> $GITHUB_STEP_SUMMARY
-            echo "- **Commits to sync:** ${{ steps.analyze.outputs.commit_count }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check.outputs.needs_sync }}" == "true" ]; then
+            echo "- **Method:** Merge (not cherry-pick)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commits:** ${{ steps.check.outputs.commit_count }}" >> $GITHUB_STEP_SUMMARY
             echo "- **PR:** ${{ steps.create_pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
             
-            if [ "${{ steps.cherry_pick.outputs.conflict_detected }}" == "true" ]; then
-              echo "- **Conflicts:** ⚠️ Yes - manual resolution required" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.merge.outputs.conflict_detected }}" == "true" ]; then
+              echo "- **Status:** ⚠️ Merge conflicts - manual resolution required" >> $GITHUB_STEP_SUMMARY
             else
-              echo "- **Conflicts:** ✅ None - ready to merge" >> $GITHUB_STEP_SUMMARY
+              echo "- **Status:** ✅ Clean merge - ready to merge" >> $GITHUB_STEP_SUMMARY
             fi
           else
             echo "- **Status:** Already synchronized ✅" >> $GITHUB_STEP_SUMMARY
