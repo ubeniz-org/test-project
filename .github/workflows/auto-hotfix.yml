@@ -32,7 +32,7 @@ jobs:
       - name: Find and analyze commits
         id: analyze
         run: |
-          set -e  # Hata durumunda dur
+          set -e
           
           MISSING=$(git log origin/rel/env-prod..origin/rel/env-test --format="%H|%s")
 
@@ -42,13 +42,14 @@ jobs:
             exit 0
           fi
 
-          # Önce tüm test branch commit'lerinin patch-id'lerini bir kere al
+          # Test branch'teki tüm patch-id'leri dosyaya yaz (bir kere)
           echo "📊 Building patch-id cache for rel/env-test..."
-          declare -A TEST_PATCHES
-          while read -r test_commit; do
-            TEST_PATCH_ID=$(git show $test_commit | git patch-id --stable | cut -d' ' -f1)
-            TEST_PATCHES[$TEST_PATCH_ID]=1
-          done < <(git log origin/rel/env-test --format="%H")
+          CACHE_FILE=$(mktemp)
+          git log origin/rel/env-test --format="%H" | while read -r test_commit; do
+            git show $test_commit | git patch-id --stable | cut -d' ' -f1
+          done > "$CACHE_FILE"
+          
+          echo "✅ Cache built: $(wc -l < "$CACHE_FILE") patches"
 
           COMMITS_TO_SYNC=""
           COMMIT_COUNT=0
@@ -56,8 +57,8 @@ jobs:
           while IFS='|' read -r hash message; do
             PROD_PATCH_ID=$(git show $hash | git patch-id --stable | cut -d' ' -f1)
             
-            # Hash lookup ile O(1) kontrol
-            if [ -z "${TEST_PATCHES[$PROD_PATCH_ID]}" ]; then
+            # grep ile O(n) ama toplam O(n*m) - yine de orijinalden iyi
+            if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
               COMMITS_TO_SYNC="$COMMITS_TO_SYNC$hash,"
               ((COMMIT_COUNT++))
               echo "🔥 Hotfix detected: ${hash:0:7} - $message"
@@ -66,10 +67,11 @@ jobs:
             fi
           done <<< "$MISSING"
 
+          rm -f "$CACHE_FILE"
           COMMITS_TO_SYNC=${COMMITS_TO_SYNC%,}
 
           if [ -z "$COMMITS_TO_SYNC" ]; then
-            echo "✅ All commits already in test branch (different hashes, same changes)"
+            echo "✅ All commits already in test branch"
             echo "needs_sync=false" >> $GITHUB_OUTPUT
           else
             echo "needs_sync=true" >> $GITHUB_OUTPUT
