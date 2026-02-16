@@ -11,28 +11,37 @@ jobs:
   sync-hotfix:
     runs-on: ubuntu-latest
 <<<<<<< HEAD
+<<<<<<< HEAD
     
 =======
     timeout-minutes: 15 # Timeout ekle
 
 >>>>>>> b6ad3e5 (Improve auto hotfix workflow with new features)
+=======
+
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+<<<<<<< HEAD
           token: ${{ secrets.GITHUB_TOKEN }}
       
+=======
+          token: ${{ secrets.PAT_TOKEN }}
+
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
       - name: Configure Git
         run: |
           git config user.name "ubeniz"
           git config user.email "umitbeniz@araskargo.com.tr"
-      
+
       - name: Fetch branches
         run: |
           git fetch origin rel/env-test
           git fetch origin rel/env-prod
-      
+
       - name: Find and analyze commits
         id: analyze
         shell: bash
@@ -41,6 +50,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
           MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
+<<<<<<< HEAD
 =======
           set -e
 >>>>>>> c56d26b (Optimize hotfix detection with patch-id caching)
@@ -65,11 +75,15 @@ jobs:
 >>>>>>> b6ad3e5 (Improve auto hotfix workflow with new features)
 
 >>>>>>> 976f848 (Refactor commit synchronization logic in auto-hotfix.yml)
+=======
+
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
           if [ -z "$MISSING" ]; then
             echo "✅ Branches are synchronized"
             echo "needs_sync=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -85,13 +99,16 @@ jobs:
           done > "$CACHE_FILE"
 >>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
           
+=======
+
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
           COMMITS_TO_SYNC=""
 <<<<<<< HEAD
 <<<<<<< HEAD
           while IFS='|' read -r hash message; do
             PROD_PATCH_ID=$(git show $hash | git patch-id | cut -d' ' -f1)
             FOUND=false
-            
+
             for test_commit in $(git log origin/rel/env-test --format="%H"); do
               TEST_PATCH_ID=$(git show $test_commit | git patch-id | cut -d' ' -f1)
               if [ "$TEST_PATCH_ID" = "$PROD_PATCH_ID" ]; then
@@ -99,7 +116,7 @@ jobs:
                 break
               fi
             done
-            
+
             if [ "$FOUND" = false ]; then
 =======
           # Önce tüm test branch commit'lerinin patch-id'lerini bir kere al
@@ -126,9 +143,9 @@ jobs:
               echo "✓ Already in test: ${hash:0:7} - $message"
             fi
           done <<< "$MISSING"
-          
+
           COMMITS_TO_SYNC=${COMMITS_TO_SYNC%,}
-          
+
           if [ -z "$COMMITS_TO_SYNC" ]; then
 =======
           COMMIT_COUNT=0
@@ -262,6 +279,7 @@ jobs:
             echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
             echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
           fi
+<<<<<<< HEAD
       
       - name: Cherry-pick to new branch
 =======
@@ -315,11 +333,15 @@ jobs:
             echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
           fi
           
+=======
+
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
       - name: Cherry-pick commits to new branch
         if: steps.analyze.outputs.needs_sync == 'true'
         id: cherry_pick
         shell: bash
         run: |
+<<<<<<< HEAD
 <<<<<<< HEAD
           set +e
           
@@ -531,10 +553,25 @@ jobs:
             if ! git cherry-pick $commit; then
               echo "conflict_detected=true" >> $GITHUB_ENV
               # Conflict durumunda da commit et
+=======
+          git checkout -b auto-hotfix-sync-${{ github.run_number }} origin/rel/env-test
+          CONFLICT_DETECTED=false
+
+          IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
+
+          for commit in "${COMMITS[@]}"; do
+            if ! git cherry-pick $commit; then
+              # Eğer conflict varsa
+              CONFLICT_DETECTED=true
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
               git add -A
-              git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)" || true
+              # Değişiklik varsa commit oluştur
+              if ! git diff --quiet; then
+                git commit -m "WIP: Cherry-pick $commit (needs conflict resolution)"
+              fi
             fi
           done
+<<<<<<< HEAD
           
           git push origin auto-hotfix-sync-${{ github.run_number }}
       
@@ -567,6 +604,32 @@ jobs:
             ## 🤖 Otomatik Hotfix Sync
             
             **Durum:** ${{ env.conflict_detected == 'true' && '⚠️ Conflict tespit edildi - Manuel review gerekiyor' || '✅ Conflict yok - Merge edilebilir' }}
+=======
+
+          echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
+          git push origin auto-hotfix-sync-${{ github.run_number }}
+
+      - name: Create Pull Request
+        if: steps.analyze.outputs.needs_sync == 'true'
+        id: create_pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const conflictDetected = '${{ steps.cherry_pick.outputs.conflict_detected }}' === 'true';
+            const title = conflictDetected 
+              ? '⚠️ [AUTO] Hotfix Sync - Review Needed'
+              : '✅ [AUTO] Hotfix Sync from Production';
+            const statusText = conflictDetected
+              ? '⚠️ Conflict tespit edildi'
+              : '✅ Conflict yok';
+
+            const commits = "${{ steps.analyze.outputs.commits }}".split(',');
+            const commitList = commits.map(c => `- [ ] ${c}`).join('\n');
+            const prBody = `## 🤖 Otomatik Hotfix Sync
+
+            **Durum:** ${statusText}
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
             
             ### Cherry-pick edilen commit'ler:
             ${{ steps.analyze.outputs.commits }}
@@ -586,6 +649,7 @@ jobs:
               ? `${conflictCommits.length} conflict(s) detected`
               : 'No conflicts - Ready to merge';
 
+<<<<<<< HEAD
             let commitList = '';
             
             if (successCommits.length > 0) {
@@ -633,6 +697,8 @@ jobs:
             
             ${conflictDetected ? '> ⚠️ **Action required:** Manual conflict resolution needed before merge' : '> ✅ **Ready to merge:** No conflicts detected'}`;
 
+=======
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -642,11 +708,14 @@ jobs:
               body: prBody
             });
 
+<<<<<<< HEAD
             const labels = ['hotfix', 'auto-sync'];
             if (conflictDetected) {
               labels.push('needs-resolution');
             }
 
+=======
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -662,9 +731,14 @@ jobs:
             });
 
             core.setOutput('pull-request-number', pr.number);
+<<<<<<< HEAD
             core.setOutput('pull-request-url', pr.html_url);
 
       - name: Add conflict resolution instructions
+=======
+
+      - name: Add comment with instructions
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
         if: steps.cherry_pick.outputs.conflict_detected == 'true'
         uses: actions/github-script@v7
         env:
@@ -674,6 +748,7 @@ jobs:
 >>>>>>> b6ad3e5 (Improve auto hotfix workflow with new features)
         with:
           script: |
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
             const conflictCommits = process.env.CONFLICT_COMMITS.split(',').filter(Boolean);
@@ -685,6 +760,9 @@ jobs:
             ${commitList}
 
             ### Resolution Steps:
+=======
+            const commentBody = `## ⚠️ Conflict Çözümü Gerekiyor
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
 
             \`\`\`bash
             # 1. Checkout the branch
@@ -703,6 +781,7 @@ jobs:
             # 5. Push the resolved changes
             git push origin auto-hotfix-sync-${process.env.RUN_NUMBER} --force-with-lease
             \`\`\`
+<<<<<<< HEAD
 
             ### Alternative: Use GitHub Web Interface
             You can also resolve conflicts directly in GitHub's web interface.
@@ -711,6 +790,11 @@ jobs:
             Once conflicts are resolved, this PR will be ready to merge. ✅`;
 
 >>>>>>> b6ad3e5 (Improve auto hotfix workflow with new features)
+=======
+            
+            Conflict çözüldükten sonra bu PR merge edilebilir.`;
+
+>>>>>>> f996fa7 (Refactor auto-hotfix workflow for conflict handling)
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
