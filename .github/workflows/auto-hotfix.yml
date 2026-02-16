@@ -94,8 +94,19 @@ jobs:
               CONFLICT_FILES=$(git ls-files -u | cut -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
               echo "conflict_files=$CONFLICT_FILES" >> $GITHUB_OUTPUT
               
-              # Don't commit yet - let user resolve
-              echo "ℹ️ Leaving conflicts for manual resolution"
+              # ÖNEMLİ: Conflict'li durumu commit et ki PR açılabilsin
+              echo "📝 Creating WIP commit with conflicts..."
+              git add -A  # Tüm değişiklikleri (conflict markers ile birlikte) stage'e al
+              
+              # Conflict içeren bir commit oluştur
+              git commit -m "WIP: Merge rel/env-prod (CONFLICTS - needs resolution)
+
+              Conflicted files:
+              $(git ls-files -u | cut -f2 | sort -u | sed 's/^/- /')
+              
+              ⚠️ This commit contains unresolved merge conflicts.
+              Manual resolution required before merging to rel/env-test." || true
+              
             else
               echo "✅ No actual conflicts (auto-resolved)"
               git add -A
@@ -105,8 +116,18 @@ jobs:
           fi
           
           # Push the branch
+          echo "📤 Pushing branch to remote..."
           git push origin "$BRANCH_NAME"
-
+          
+          # Verify branch has commits
+          COMMIT_COUNT=$(git rev-list --count origin/rel/env-test.."$BRANCH_NAME")
+          echo "📊 Branch has $COMMIT_COUNT commit(s) ahead of rel/env-test"
+          
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "❌ ERROR: Branch has no commits, cannot create PR"
+            exit 1
+          fi
+          
       - name: Create Pull Request
         if: steps.check.outputs.needs_sync == 'true'
         id: create_pr
