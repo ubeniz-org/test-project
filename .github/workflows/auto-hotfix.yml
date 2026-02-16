@@ -30,13 +30,22 @@ jobs:
       - name: Find and analyze commits
         id: analyze
         run: |
+<<<<<<< HEAD
           MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
           
+=======
+          set -e
+          
+          # Prod'da olup test'te olmayan commitler
+          MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H")
+
+>>>>>>> 976f848 (Refactor commit synchronization logic in auto-hotfix.yml)
           if [ -z "$MISSING" ]; then
             echo "✅ Senkronize"
             echo "needs_sync=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+<<<<<<< HEAD
           
           COMMITS_TO_SYNC=""
           while IFS='|' read -r hash message; do
@@ -67,6 +76,30 @@ jobs:
           fi
       
       - name: Cherry-pick to new branch
+=======
+
+          MISSING_COUNT=$(echo "$MISSING" | wc -l)
+          echo "📊 Commits in prod not in test (by hash): $MISSING_COUNT"
+          echo ""
+          
+          # Basit ama etkili: Sadece commit hash'lerini kullan
+          # GitHub UI "able to merge" diyorsa, cherry-pick başarılı olur
+          COMMITS_TO_SYNC=$(echo "$MISSING" | tr '\n' ',' | sed 's/,$//')
+          
+          echo "🔥 Commits to sync:"
+          echo "$MISSING" | while read hash; do
+            [ -z "$hash" ] && continue
+            MSG=$(git log -1 --format="%s" "$hash")
+            echo "  ${hash:0:7} - $MSG"
+          done
+          
+          echo ""
+          echo "needs_sync=true" >> $GITHUB_OUTPUT
+          echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
+          echo "commit_count=$MISSING_COUNT" >> $GITHUB_OUTPUT
+          
+      - name: Cherry-pick commits to new branch
+>>>>>>> 976f848 (Refactor commit synchronization logic in auto-hotfix.yml)
         if: steps.analyze.outputs.needs_sync == 'true'
         run: |
           git checkout origin/rel/env-test
