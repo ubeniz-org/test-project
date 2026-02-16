@@ -29,6 +29,7 @@ jobs:
       
       - name: Find and analyze commits
         id: analyze
+        shell: bash
         run: |
 <<<<<<< HEAD
           MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
@@ -37,7 +38,11 @@ jobs:
           set -e
           
           # Prod'da olup test'te olmayan commitler
+<<<<<<< HEAD
           MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H")
+=======
+          MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
+>>>>>>> bb07eeb (Improve commit synchronization and conflict handling)
 
 >>>>>>> 976f848 (Refactor commit synchronization logic in auto-hotfix.yml)
           if [ -z "$MISSING" ]; then
@@ -45,6 +50,7 @@ jobs:
             echo "needs_sync=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+<<<<<<< HEAD
 <<<<<<< HEAD
           
           COMMITS_TO_SYNC=""
@@ -139,6 +145,149 @@ jobs:
           # Basit ama etkili: Sadece commit hash'lerini kullan
           # GitHub UI "able to merge" diyorsa, cherry-pick başarılı olur
           COMMITS_TO_SYNC=$(echo "$MISSING" | tr '\n' ',' | sed 's/,$//')
+=======
+
+          echo "📊 Commits in prod not in test (by hash): $(echo "$MISSING" | wc -l)"
+          
+          # Akıllı filtreleme: git cherry ile gerçekten uygulanması gereken commitleri bul
+          echo ""
+          echo "🔍 Analyzing which commits actually need to be applied..."
+          
+          COMMITS_TO_SYNC=""
+          COMMIT_COUNT=0
+          
+          # git cherry: test branch'e göre hangi commitler eksik?
+          # + ile başlayanlar = uygulanmamış
+          # - ile başlayanlar = zaten uygulanmış (farklı hash ama aynı değişiklik)
+          while read -r status commit_hash rest; do
+            if [ "$status" = "+" ]; then
+              # Bu commit gerçekten uygulanması gerekiyor
+              COMMIT_MSG=$(git log -1 --format="%s" "$commit_hash")
+              echo "🔥 Needs sync: ${commit_hash:0:7} - $COMMIT_MSG"
+              
+              [ -n "$COMMITS_TO_SYNC" ] && COMMITS_TO_SYNC="${COMMITS_TO_SYNC},"
+              COMMITS_TO_SYNC="${COMMITS_TO_SYNC}${commit_hash}"
+              ((COMMIT_COUNT++))
+            else
+              # Bu commit'in değişikliği zaten test'te var
+              COMMIT_MSG=$(git log -1 --format="%s" "$commit_hash")
+              echo "✓ Already applied: ${commit_hash:0:7} - $COMMIT_MSG"
+            fi
+          done < <(git cherry origin/rel/env-test origin/rel/env-prod)
+
+          if [ $COMMIT_COUNT -eq 0 ]; then
+            echo ""
+            echo "✅ All changes already in test branch (via cherry-pick or merge)"
+            echo "needs_sync=false" >> $GITHUB_OUTPUT
+          else
+            echo ""
+            echo "🔥 Found $COMMIT_COUNT commit(s) that need to be synced"
+            echo "needs_sync=true" >> $GITHUB_OUTPUT
+            echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
+            echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Cherry-pick commits to new branch
+        if: steps.analyze.outputs.needs_sync == 'true'
+        id: cherry_pick
+        shell: bash
+        run: |
+          set +e
+          
+          BRANCH_NAME="auto-hotfix-sync-${{ github.run_number }}"
+          git checkout -b "$BRANCH_NAME" origin/rel/env-test
+          
+          CONFLICT_DETECTED=false
+          CONFLICT_COMMITS=""
+          SUCCESS_COMMITS=""
+          SKIPPED_COMMITS=""
+
+          IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
+
+          for commit in "${COMMITS[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "🔄 Processing commit: $commit"
+            git log --oneline -1 "$commit"
+            echo "=========================================="
+            
+            # Cherry-pick yap
+            if git cherry-pick "$commit" 2>&1; then
+              echo "✅ Cherry-pick successful"
+              [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
+              SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
+              
+            else
+              CHERRY_EXIT=$?
+              echo "⚠️ Cherry-pick failed with exit code: $CHERRY_EXIT"
+              
+              # Git durumunu kontrol et
+              echo ""
+              echo "Git status:"
+              git status --short
+              
+              # Unmerged files var mı? (gerçek conflict)
+              if git ls-files -u | grep -q .; then
+                echo "🔴 REAL CONFLICT - Unmerged files detected:"
+                git ls-files -u
+                
+                CONFLICT_DETECTED=true
+                [ -n "$CONFLICT_COMMITS" ] && CONFLICT_COMMITS="${CONFLICT_COMMITS},"
+                CONFLICT_COMMITS="${CONFLICT_COMMITS}${commit}"
+                
+                # Conflict'leri resolve et ve commit
+                git add -A
+                git commit --no-edit -m "WIP: Cherry-pick $commit (⚠️ CONFLICT)"
+                
+              else
+                echo "ℹ️ No unmerged files"
+                
+                # Staged veya unstaged değişiklik var mı?
+                if ! git diff --cached --quiet || ! git diff --quiet; then
+                  echo "✅ Changes detected (non-conflict issue) - committing"
+                  git add -A
+                  git commit --no-edit -m "Cherry-pick $commit (auto-resolved)"
+                  [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
+                  SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
+                else
+                  echo "⊘ Empty commit (changes already in test) - skipping"
+                  git cherry-pick --abort 2>/dev/null || true
+                  git reset --hard 2>/dev/null || true
+                  [ -n "$SKIPPED_COMMITS" ] && SKIPPED_COMMITS="${SKIPPED_COMMITS},"
+                  SKIPPED_COMMITS="${SKIPPED_COMMITS}${commit}"
+                fi
+              fi
+            fi
+            
+            echo ""
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "📊 Final Summary:"
+          echo "  ✅ Success: $(echo "$SUCCESS_COMMITS" | tr ',' ' ' | wc -w)"
+          echo "  🔴 Conflicts: $(echo "$CONFLICT_COMMITS" | tr ',' ' ' | wc -w)"
+          echo "  ⊘ Skipped (already applied): $(echo "$SKIPPED_COMMITS" | tr ',' ' ' | wc -w)"
+          echo "=========================================="
+
+          # Eğer hiç gerçek conflict yoksa ve sadece skip varsa
+          if [ "$CONFLICT_DETECTED" = "false" ] && [ -z "$SUCCESS_COMMITS" ] && [ -n "$SKIPPED_COMMITS" ]; then
+            echo ""
+            echo "✅ All commits already exist in test branch (no sync needed)"
+            echo "conflict_detected=false" >> $GITHUB_OUTPUT
+            echo "all_skipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
+            echo "all_skipped=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "conflict_commits=$CONFLICT_COMMITS" >> $GITHUB_OUTPUT
+          echo "success_commits=$SUCCESS_COMMITS" >> $GITHUB_OUTPUT
+          echo "skipped_commits=$SKIPPED_COMMITS" >> $GITHUB_OUTPUT
+          
+          # Branch'i push et
+          git push origin "$BRANCH_NAME"
+>>>>>>> bb07eeb (Improve commit synchronization and conflict handling)
           
           echo "🔥 Commits to sync:"
           echo "$MISSING" | while read hash; do
