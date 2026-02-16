@@ -32,13 +32,29 @@ jobs:
         run: |
           MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
           
+<<<<<<< HEAD
+=======
+          MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
+
+>>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
           if [ -z "$MISSING" ]; then
             echo "✅ Senkronize"
             echo "needs_sync=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+<<<<<<< HEAD
+=======
+
+          # Test branch'teki tüm patch-id'leri dosyaya yaz (bir kere)
+          echo "📊 Building patch-id cache for rel/env-test..."
+          CACHE_FILE=$(mktemp)
+          git log origin/rel/env-test --format="%H" | while read -r test_commit; do
+            git show "$test_commit" | git patch-id --stable | cut -d' ' -f1
+          done > "$CACHE_FILE"
+>>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
           
           COMMITS_TO_SYNC=""
+<<<<<<< HEAD
           while IFS='|' read -r hash message; do
             PROD_PATCH_ID=$(git show $hash | git patch-id | cut -d' ' -f1)
             FOUND=false
@@ -60,13 +76,64 @@ jobs:
           COMMITS_TO_SYNC=${COMMITS_TO_SYNC%,}
           
           if [ -z "$COMMITS_TO_SYNC" ]; then
+=======
+          COMMIT_COUNT=0
+          
+          echo "$MISSING" | while IFS='|' read -r hash message; do
+            [ -z "$hash" ] && continue
+            
+            PROD_PATCH_ID=$(git show "$hash" | git patch-id --stable | cut -d' ' -f1)
+            
+            # grep ile kontrol
+            if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
+              COMMITS_TO_SYNC="${COMMITS_TO_SYNC}${hash},"
+              COMMIT_COUNT=$((COMMIT_COUNT + 1))
+              echo "🔥 Hotfix detected: ${hash} - $message" | cut -c1-100
+            else
+              echo "✓ Already in test: ${hash} - $message" | cut -c1-100
+            fi
+          done
+          
+          # Subshell problemini çöz - while loop içindeki değişkenler dışarı çıkmıyor
+          # Tekrar hesapla
+          COMMITS_TO_SYNC=""
+          COMMIT_COUNT=0
+          
+          while IFS='|' read -r hash message; do
+            [ -z "$hash" ] && continue
+            
+            PROD_PATCH_ID=$(git show "$hash" | git patch-id --stable | cut -d' ' -f1)
+            
+            if ! grep -q "^${PROD_PATCH_ID}$" "$CACHE_FILE"; then
+              if [ -z "$COMMITS_TO_SYNC" ]; then
+                COMMITS_TO_SYNC="$hash"
+              else
+                COMMITS_TO_SYNC="${COMMITS_TO_SYNC},${hash}"
+              fi
+              COMMIT_COUNT=$((COMMIT_COUNT + 1))
+            fi
+          done <<EOF
+          $MISSING
+          EOF
+
+          rm -f "$CACHE_FILE"
+
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "✅ All commits already in test branch"
+>>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
             echo "needs_sync=false" >> $GITHUB_OUTPUT
           else
+            echo "🔥 Found $COMMIT_COUNT commit(s) to sync"
             echo "needs_sync=true" >> $GITHUB_OUTPUT
             echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
           fi
+<<<<<<< HEAD
       
       - name: Cherry-pick to new branch
+=======
+          
+      - name: Cherry-pick commits to new branch
+>>>>>>> 47a3469 (Refactor commit synchronization logic in workflow)
         if: steps.analyze.outputs.needs_sync == 'true'
         run: |
           git checkout origin/rel/env-test
