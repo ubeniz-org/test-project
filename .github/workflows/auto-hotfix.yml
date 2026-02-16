@@ -36,7 +36,7 @@ jobs:
           set -e
           
           # Prod'da olup test'te olmayan commitler
-          MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H|%s")
+          MISSING=$(git log origin/rel/env-test..origin/rel/env-prod --format="%H")
 
           if [ -z "$MISSING" ]; then
             echo "✅ Branches are synchronized"
@@ -44,72 +44,25 @@ jobs:
             exit 0
           fi
 
-          echo "📊 Commits in prod not in test (by hash): $(echo "$MISSING" | wc -l)"
-          
-          # Akıllı filtreleme: git cherry ile gerçekten uygulanması gereken commitleri bul
+          MISSING_COUNT=$(echo "$MISSING" | wc -l)
+          echo "📊 Commits in prod not in test (by hash): $MISSING_COUNT"
           echo ""
-          echo "🔍 Analyzing which commits actually need to be applied..."
           
-          COMMITS_TO_SYNC=""
-          COMMIT_COUNT=0
-          ALREADY_APPLIED=0
+          # Basit ama etkili: Sadece commit hash'lerini kullan
+          # GitHub UI "able to merge" diyorsa, cherry-pick başarılı olur
+          COMMITS_TO_SYNC=$(echo "$MISSING" | tr '\n' ',' | sed 's/,$//')
           
-          # git cherry çıktısını önce kontrol et
-          CHERRY_OUTPUT=$(git cherry origin/rel/env-test origin/rel/env-prod 2>&1 || true)
+          echo "🔥 Commits to sync:"
+          echo "$MISSING" | while read hash; do
+            [ -z "$hash" ] && continue
+            MSG=$(git log -1 --format="%s" "$hash")
+            echo "  ${hash:0:7} - $MSG"
+          done
           
-          if [ -z "$CHERRY_OUTPUT" ]; then
-            echo "⚠️ git cherry returned empty output, falling back to simple comparison"
-            # Fallback: tüm commitleri sync olarak işaretle
-            while IFS='|' read -r hash message; do
-              [ -z "$hash" ] && continue
-              echo "🔥 Needs sync: ${hash:0:7} - $message"
-              [ -n "$COMMITS_TO_SYNC" ] && COMMITS_TO_SYNC="${COMMITS_TO_SYNC},"
-              COMMITS_TO_SYNC="${COMMITS_TO_SYNC}${hash}"
-              ((COMMIT_COUNT++))
-            done <<< "$MISSING"
-          else
-            echo "git cherry output:"
-            echo "$CHERRY_OUTPUT" | head -10
-            echo ""
-            
-            # git cherry çıktısını parse et
-            while read -r line; do
-              [ -z "$line" ] && continue
-              
-              status=$(echo "$line" | cut -c1)
-              commit_hash=$(echo "$line" | awk '{print $2}')
-              
-              if [ "$status" = "+" ]; then
-                COMMIT_MSG=$(git log -1 --format="%s" "$commit_hash" 2>/dev/null || echo "Unknown")
-                echo "🔥 Needs sync: ${commit_hash:0:7} - $COMMIT_MSG"
-                
-                [ -n "$COMMITS_TO_SYNC" ] && COMMITS_TO_SYNC="${COMMITS_TO_SYNC},"
-                COMMITS_TO_SYNC="${COMMITS_TO_SYNC}${commit_hash}"
-                ((COMMIT_COUNT++))
-              elif [ "$status" = "-" ]; then
-                COMMIT_MSG=$(git log -1 --format="%s" "$commit_hash" 2>/dev/null || echo "Unknown")
-                echo "✓ Already applied: ${commit_hash:0:7} - $COMMIT_MSG"
-                ((ALREADY_APPLIED++))
-              fi
-            done <<< "$CHERRY_OUTPUT"
-          fi
-
           echo ""
-          echo "📊 Analysis complete:"
-          echo "  - Already applied: $ALREADY_APPLIED"
-          echo "  - Need to sync: $COMMIT_COUNT"
-
-          if [ $COMMIT_COUNT -eq 0 ]; then
-            echo ""
-            echo "✅ All changes already in test branch"
-            echo "needs_sync=false" >> $GITHUB_OUTPUT
-          else
-            echo ""
-            echo "🔥 Found $COMMIT_COUNT commit(s) that need to be synced"
-            echo "needs_sync=true" >> $GITHUB_OUTPUT
-            echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
-            echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
-          fi
+          echo "needs_sync=true" >> $GITHUB_OUTPUT
+          echo "commits=$COMMITS_TO_SYNC" >> $GITHUB_OUTPUT
+          echo "commit_count=$MISSING_COUNT" >> $GITHUB_OUTPUT
           
       - name: Cherry-pick commits to new branch
         if: steps.analyze.outputs.needs_sync == 'true'
