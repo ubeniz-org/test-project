@@ -106,11 +106,12 @@ jobs:
       - name: Cherry-pick commits to new branch
         if: steps.analyze.outputs.needs_sync == 'true'
         id: cherry_pick
+        shell: bash
         run: |
-          set +e  # Cherry-pick hataları için devam et
+          set +e
           
           BRANCH_NAME="auto-hotfix-sync-${{ github.run_number }}"
-          git checkout -b $BRANCH_NAME origin/rel/env-test
+          git checkout -b "$BRANCH_NAME" origin/rel/env-test
           
           CONFLICT_DETECTED=false
           CONFLICT_COMMITS=""
@@ -119,38 +120,69 @@ jobs:
           IFS=',' read -ra COMMITS <<< "${{ steps.analyze.outputs.commits }}"
 
           for commit in "${COMMITS[@]}"; do
+            echo ""
             echo "🔄 Cherry-picking $commit..."
             
-            if git cherry-pick $commit; then
+            # Cherry-pick yap
+            git cherry-pick "$commit"
+            CHERRY_PICK_EXIT=$?
+            
+            if [ $CHERRY_PICK_EXIT -eq 0 ]; then
+              # Başarılı
               echo "✅ Success: $commit"
-              SUCCESS_COMMITS="$SUCCESS_COMMITS$commit,"
+              [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
+              SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
+              
             else
-              echo "⚠️ Conflict detected in: $commit"
-              CONFLICT_DETECTED=true
-              CONFLICT_COMMITS="$CONFLICT_COMMITS$commit,"
-              
-              # Conflict varsa tüm değişiklikleri staged duruma al
-              git add -A
-              
-              # Staged değişiklik var mı kontrol et
-              if ! git diff --cached --quiet; then
-                # WIP commit oluştur
+              # Hata var - conflict mi yoksa başka bir şey mi kontrol et
+              if git ls-files -u | grep -q .; then
+                # Gerçekten conflict var (unmerged files)
+                echo "⚠️ REAL CONFLICT detected in: $commit"
+                CONFLICT_DETECTED=true
+                [ -n "$CONFLICT_COMMITS" ] && CONFLICT_COMMITS="${CONFLICT_COMMITS},"
+                CONFLICT_COMMITS="${CONFLICT_COMMITS}${commit}"
+                
+                # Conflict'i staged duruma al
+                git add -A
                 git commit --no-edit -m "WIP: Cherry-pick $commit (⚠️ CONFLICT - needs manual resolution)"
+                
               else
-                # Değişiklik yoksa cherry-pick'i skip et
-                git cherry-pick --skip
+                # Conflict yok, başka bir sebep (empty commit vs)
+                echo "ℹ️ Cherry-pick failed but no conflicts: $commit (possibly empty)"
+                
+                # Status'u kontrol et
+                git status
+                
+                # Eğer hiç değişiklik yoksa skip et
+                if git diff --cached --quiet && git diff --quiet; then
+                  echo "→ Skipping (no changes)"
+                  git cherry-pick --skip || git cherry-pick --abort || true
+                  [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
+                  SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
+                else
+                  # Değişiklik var ama conflict yok - commit et
+                  git add -A
+                  git commit --no-edit --allow-empty -m "Cherry-pick $commit (auto-resolved)"
+                  [ -n "$SUCCESS_COMMITS" ] && SUCCESS_COMMITS="${SUCCESS_COMMITS},"
+                  SUCCESS_COMMITS="${SUCCESS_COMMITS}${commit}"
+                fi
               fi
             fi
           done
 
-          # Output'ları set et
-          echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
-          echo "conflict_commits=${CONFLICT_COMMITS%,}" >> $GITHUB_OUTPUT
-          echo "success_commits=${SUCCESS_COMMITS%,}" >> $GITHUB_OUTPUT
-          
-          # Branch'i push et
-          git push origin $BRANCH_NAME
+          echo ""
+          echo "==================================="
+          echo "Cherry-pick Summary:"
+          echo "  Success: $(echo "$SUCCESS_COMMITS" | tr ',' '\n' | grep -c .)"
+          echo "  Conflicts: $(echo "$CONFLICT_COMMITS" | tr ',' '\n' | grep -c .)"
+          echo "==================================="
 
+          echo "conflict_detected=$CONFLICT_DETECTED" >> $GITHUB_OUTPUT
+          echo "conflict_commits=$CONFLICT_COMMITS" >> $GITHUB_OUTPUT
+          echo "success_commits=$SUCCESS_COMMITS" >> $GITHUB_OUTPUT
+          
+          git push origin "$BRANCH_NAME"
+          
       - name: Create Pull Request
         if: steps.analyze.outputs.needs_sync == 'true'
         id: create_pr
